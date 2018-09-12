@@ -1,4 +1,5 @@
-
+from functools import reduce
+from operator import mul
 from sys import argv
 
 assert len(argv)==2
@@ -59,7 +60,14 @@ class Net(object):
 
 	def show(self):
 		if len(self.v):
-			print(len(self.v)-1, self.v[-1])
+			geom = self.v[-1][1]
+			size = reduce(mul, geom) if geom else None
+			print("%3d %12s %16s %10s" % (
+				len(self.v)-1,
+				self.v[-1][0],
+				self.v[-1][1],
+				size,
+			))
 		else:
 			print(-1, self.input)
 
