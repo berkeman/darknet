@@ -30,6 +30,7 @@ class Net(object):
 		self.v.append(['upsample', self.current])
 
 	def shortcut(self, layer):
+		# plain copy from layer
 		layer = self._abslayer(layer)
 		assert self.v[layer][1] == self.v[len(self.v)-1][1]
 		self.v.append(['upsample', self.current])
@@ -43,6 +44,7 @@ class Net(object):
 		if len(layers) == 1:
 			self.current = self.v[layers[0]][1]
 		elif len(layers) == 2:
+			assert self.v[layers[0]][1][0:2] == self.v[layers[1]][1][0:2]
 			self.current = (
 				self.current[0],
 				self.current[1],
