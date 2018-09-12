@@ -3,9 +3,65 @@ from sys import argv
 
 assert len(argv)==2
 
-v = {}
-layer = 0
-nw, nh, nc = None, None, None
+class Net(object):
+	def __init__(self, w, h, c):
+		self.v = []
+		w, h, c = (int(w), int(h), int(c))
+		self.input = (w, h, c)
+		self.current = (w, h, c)
+
+	def _abslayer(self, layer):
+		return len(self.v) + layer if layer < 0 else layer
+
+	def conv(self, stride, filters):
+		self.current = (
+			self.current[0]//stride,
+			self.current[1]//stride,
+			filters,
+		)
+		self.v.append(['convolve', self.current])
+
+	def upsample(self, stride):
+		self.current = (
+			self.current[0]*stride,
+			self.current[1]*stride,
+			self.current[2],
+		)
+		self.v.append(['upsample', self.current])
+
+	def shortcut(self, layer):
+		layer = self._abslayer(layer)
+		assert self.v[layer][1] == self.v[len(self.v)-1][1]
+		self.v.append(['upsample', self.current])
+
+	def route(self, layers):
+		# route will just take info from <layers> and
+		# concatenate them (if more than one)
+		# without any processing.
+		# (Same as "concat" in Caffee, I've been told.)
+		layers = [self._abslayer(x) for x in layers]
+		if len(layers) == 1:
+			self.current = self.v[layers[0]][1]
+		elif len(layers) == 2:
+			self.current = (
+				self.current[0],
+				self.current[1],
+				self.v[layers[0]][1][2] + self.v[layers[1]][1][2]
+			)
+		else:
+			exit(-1)
+		self.v.append(['route   ', self.current])
+
+	def yolo(self):
+		self.v.append(['yolo    ', ()])
+
+	def show(self):
+		if len(self.v):
+			print(len(self.v)-1, self.v[-1])
+		else:
+			print(-1, self.input)
+
+N = None
 net = {}
 context = None
 pset = {}
@@ -13,96 +69,26 @@ with open(argv[1], 'rt') as fh:
 	for line in fh:
 		line = line.rstrip('\n')
 		if line.startswith('['):
-			# print previous
 			if context == '[net]':
-				for x in ['width', 'height', 'channels']:
-					net[x] = pset[x]
-				nw = net['width']
-				nh = net['height']
-				nc = net['channels']
-
+				N = Net(pset['width'], pset['height'], pset['channels'])
 			elif context == '[convolutional]':
-				new_w = nw // pset['stride']
-				new_h = nh // pset['stride']
-				new_c = pset['filters']
-				print(
-					layer,
-					'conv',
-					nw, nh, nc,
-					'|',
-					new_w, new_h, new_c,
-					nw*nh*nc, new_w*new_h*new_c,
-				)
-				nw = new_w
-				nh = new_h
-				nc = new_c
-				v[layer] = (new_w, new_h, new_c)
-				layer += 1
-
+				N.conv(pset['stride'], pset['filters'])
 			elif context == '[upsample]':
-				new_w = nw * pset['stride']
-				new_h = nh * pset['stride']
-				new_c = nc
-				print(
-					layer,
-					'upsample',
-					nw, nh, nc,
-					'|',
-					new_w, new_h, new_c,
-					nw*nh*nc, new_w*new_h*new_c,
-				)
-				nw = new_w
-				nh = new_h
-				nc = new_c
-				v[layer] = (new_w, new_h, new_c)
-				layer += 1
-
+				N.upsample(pset['stride'])
 			elif context == '[shortcut]':
-				fromlayer = int(pset['from'])
-				fromlayer = fromlayer if fromlayer>0 else layer+fromlayer
-				new_w, new_h, new_c = v[fromlayer]
-
-				print(layer, 'shortcut', fromlayer,
-					new_w, new_h, new_c,
-					nw*nh*nc, new_w*new_h*new_c,
-				)
-				v[layer] = (new_w, new_h, new_c)
-				layer += 1
-
+				N.shortcut(pset['from'])
 			elif context == '[yolo]':
-				print(layer, 'yolo')
-				layer += 1
-
+				N.yolo()
 			elif context == '[route]':
-				# route will just take info from <layers> and
-				# concatenate them (if more than one)
-				# without any processing.
-				# (Same as "concat" in Caffee, I've been told.)
-				print('X', pset['layers'])
-				layers = pset['layers']
-				layers = [layer + x if x<0 else x for x in layers]
-				if len(layers) == 1:
-					new_w, new_h, new_c = v[layers[0]]
-				else:
-					new_w, new_h, new_c = v[layers[1]]
-					new_c += v[layers[0]][2]
-
-				print(layer, 'route', layers,
-					new_w, new_h, new_c,
-					nw*nh*nc, new_w*new_h*new_c,
-				)
-				v[layer] = (new_w, new_h, new_c)
-				layer += 1
+				N.route(pset['layers'])
 			else:
 				if context is not None:
 					print('Unknown context', context)
 					exit(1)
-
-
-			# restart
 			context = line
 			pset = {}
-
+			if N:
+				N.show()
 		elif '=' in line:
 			param, value = line.replace(' ', '').split('=')
 			if param == 'layers':
