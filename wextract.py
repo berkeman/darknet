@@ -1,5 +1,6 @@
 from functools import reduce
 from operator import mul
+from itertools import chain
 from sys import argv
 
 assert len(argv)==2
@@ -76,7 +77,7 @@ net = {}
 context = None
 pset = {}
 with open(argv[1], 'rt') as fh:
-	for line in fh:
+	for line in chain(fh, "\n[done]\n"):
 		line = line.rstrip('\n')
 		if line.startswith('['):
 			if context == '[net]':
