@@ -15,13 +15,16 @@ class Net(object):
 	def _abslayer(self, layer):
 		return len(self.v) + layer if layer < 0 else layer
 
-	def conv(self, stride, filters):
+	def conv(self, stride, filters, size):
+		macs = filters * size * size * self.current[2] * \
+		       self.current[0] * self.current[1] \
+		       // stride // stride
 		self.current = (
 			self.current[0]//stride,
 			self.current[1]//stride,
 			filters,
 		)
-		self.v.append(['convolve', self.current])
+		self.v.append(['convolve', self.current, macs])
 
 	def upsample(self, stride):
 		self.current = (
@@ -63,11 +66,12 @@ class Net(object):
 		if len(self.v):
 			geom = self.v[-1][1]
 			size = reduce(mul, geom) if geom else None
-			print("%3d %12s %16s %10s" % (
+			print("%3d %12s %16s %10s %10s" % (
 				len(self.v)-1,
 				self.v[-1][0],
 				self.v[-1][1],
 				size,
+				self.v[-1][2] if len(self.v[-1]) > 2 else 0,
 			))
 		else:
 			print(-1, self.input)
@@ -83,7 +87,7 @@ with open(argv[1], 'rt') as fh:
 			if context == '[net]':
 				N = Net(pset['width'], pset['height'], pset['channels'])
 			elif context == '[convolutional]':
-				N.conv(pset['stride'], pset['filters'])
+				N.conv(pset['stride'], pset['filters'], pset['size'])
 			elif context == '[upsample]':
 				N.upsample(pset['stride'])
 			elif context == '[shortcut]':
