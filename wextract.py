@@ -8,37 +8,50 @@ assert len(argv)==2
 class Net(object):
 	def __init__(self, w, h, c):
 		self.v = []
-		w, h, c = (int(w), int(h), int(c))
-		self.input = (w, h, c)
-		self.current = (w, h, c)
+		self.dims = dict(w = int(w), h = int(h), c = int(c),)
+		self.input = dict(
+			type = 'input',
+			dims = self.dims,
+		)
 
 	def _abslayer(self, layer):
 		return len(self.v) + layer if layer < 0 else layer
 
 	def conv(self, stride, filters, size):
-		macs = filters * size * size * self.current[2] * \
-		       self.current[0] * self.current[1] \
+		macs = filters * size * size * self.dims['c'] * \
+		       self.dims['w'] * self.dims['h'] \
 		       // stride // stride
-		self.current = (
-			self.current[0]//stride,
-			self.current[1]//stride,
-			filters,
+		self.dims = dict(
+			w = self.dims['w'] // stride,
+			h = self.dims['h'] // stride,
+			c = filters,
 		)
-		self.v.append(['convolve', self.current, macs])
+		self.v.append(dict(
+			type = 'convolve',
+			params = "%dx%d/%dx%d" % (size, size, stride, filters),
+			dims = self.dims,
+			macs = macs,
+		))
 
 	def upsample(self, stride):
-		self.current = (
-			self.current[0]*stride,
-			self.current[1]*stride,
-			self.current[2],
-		)
-		self.v.append(['upsample', self.current])
+		for x in 'wh':
+			self.dims[x] = stride * self.dims[x]
+		self.v.append(dict(
+			type = 'upsample',
+			params = stride,
+			dims = self.dims,
+		))
 
 	def shortcut(self, layer):
-		# plain copy from layer
+		# elementwise add <layer> to previous layer
 		layer = self._abslayer(layer)
-		assert self.v[layer][1] == self.v[len(self.v)-1][1]
-		self.v.append(['upsample', self.current])
+		self.dims = self.v[layer]['dims']
+		self.v.append(dict(
+			type = 'shortcut',
+			params = layer,
+			dims = self.dims,
+		))
+
 
 	def route(self, layers):
 		# route will just take info from <layers> and
@@ -47,34 +60,42 @@ class Net(object):
 		# (Same as "concat" in Caffee, I've been told.)
 		layers = [self._abslayer(x) for x in layers]
 		if len(layers) == 1:
-			self.current = self.v[layers[0]][1]
+			self.dims = self.v[layers[0]]['dims']
 		elif len(layers) == 2:
-			assert self.v[layers[0]][1][0:2] == self.v[layers[1]][1][0:2]
-			self.current = (
-				self.current[0],
-				self.current[1],
-				self.v[layers[0]][1][2] + self.v[layers[1]][1][2]
-			)
+			for x in 'wh':
+				assert self.v[layers[0]]['dims'][x] == self.v[layers[1]]['dims'][x]
+			self.dims['c'] = sum(self.v[l]['dims']['c'] for l in layers)
 		else:
 			exit(-1)
-		self.v.append(['route   ', self.current])
+		self.v.append(dict(
+			type = 'route',
+			params = ','.join(str(x) for x in layers),
+			dims = self.dims,
+		))
 
 	def yolo(self):
-		self.v.append(['yolo    ', ()])
+		self.v.append(dict(
+			type = 'yolo',
+			dims = {},
+		))
 
 	def show(self):
-		if len(self.v):
-			geom = self.v[-1][1]
-			size = reduce(mul, geom) if geom else None
-			print("%3d %12s %16s %10s %10s" % (
-				len(self.v)-1,
-				self.v[-1][0],
-				self.v[-1][1],
-				size,
-				self.v[-1][2] if len(self.v[-1]) > 2 else 0,
-			))
+		v = self.v
+		if len(v):
+			x = v[-1]
 		else:
-			print(-1, self.input)
+			x = self.input
+		size = reduce(mul, (x.get('dims', {}).get(key, 0) for key in 'whc'))
+		print("%3d %-12s %-12s %4d %4d %4d %12d %12d" % (
+			len(v)-1,
+			x['type'],
+			x.get('params', '-'),
+			x['dims'].get('h', 0),
+			x['dims'].get('w', 0),
+			x['dims'].get('c', 0),
+			size,
+			x.get('macs', 0),
+		))
 
 N = None
 net = {}
