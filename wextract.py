@@ -17,13 +17,17 @@ class Net(object):
 	def _abslayer(self, layer):
 		return len(self.v) + layer if layer < 0 else layer
 
-	def conv(self, stride, filters, size):
+	def conv(self, stride, filters, size, pad=0):
+		if stride == 1:
+			# assume "same"
+			pad = (size - 1) // 2
 		macs = filters * size * size * self.dims['c'] * \
 		       self.dims['w'] * self.dims['h'] \
 		       // stride // stride
+		weights = filters * (size * size * self.dims['c'] + 1)
 		self.dims = dict(
-			w = self.dims['w'] // stride,
-			h = self.dims['h'] // stride,
+			w = ((self.dims['w'] + 2*pad - size) // stride) + 1,
+			h = ((self.dims['h'] + 2*pad - size) // stride) + 1,
 			c = filters,
 		)
 		self.v.append(dict(
@@ -31,6 +35,7 @@ class Net(object):
 			params = "%dx%d/%dx%d" % (size, size, stride, filters),
 			dims = self.dims,
 			macs = macs,
+			weights = weights,
 		))
 
 	def upsample(self, stride):
@@ -52,14 +57,19 @@ class Net(object):
 			dims = self.dims,
 		))
 
-	def maxpool(self, stride, size):
+	def maxpool(self, stride, size, padding):
+		if stride == 1:
+			# assume "same"
+			pad = (size - 1) // 2
+		else:
+			pad = padding
 		self.dims = dict(
-			w = self.dims['w'] // stride,
-			h = self.dims['h'] // stride,
+			w = ((self.dims['w'] + 2*pad - size) // stride) + 1,
+			h = ((self.dims['h'] + 2*pad - size) // stride) + 1,
 			c = self.dims['c'],
 		)
 		self.v.append(dict(
-			type = 'convolve',
+			type = 'maxpool',
 			params = "%dx%d/%dx" % (size, size, stride),
 			dims = self.dims,
 		))
@@ -90,6 +100,30 @@ class Net(object):
 			dims = {},
 		))
 
+	def connected(self, output):
+		self.dims = dict(w = output, h=1, c=1)
+		x = self.v[-1]['dims']
+		macs = output * x['w'] * x['h'] * x['c']
+		self.v.append(dict(
+			type = 'fc',
+			macs = macs,
+			dims = self.dims,
+			weights = output * (x['w'] * x['h'] * x['c'] + 1)
+		))
+
+	def dropout(self):
+		self.v.append(dict(
+			type = 'dropout',
+			dims = self.dims,
+		))
+
+	def softmax(self):
+		self.v.append(dict(
+			type = 'softmax',
+			dims = self.dims,
+		))
+
+
 	def show(self):
 		v = self.v
 		if len(v):
@@ -97,7 +131,7 @@ class Net(object):
 		else:
 			x = self.input
 		size = reduce(mul, (x.get('dims', {}).get(key, 0) for key in 'whc'))
-		print("%3d %-12s %-12s %4d %4d %4d %12d %12d" % (
+		print("%3d %-12s %-12s %4d %4d %4d %12d %12d %12d" % (
 			len(v)-1,
 			x['type'],
 			x.get('params', '-'),
@@ -106,6 +140,7 @@ class Net(object):
 			x['dims'].get('c', 0),
 			size,
 			x.get('macs', 0),
+			x.get('weights', 0),
 		))
 
 N = None
@@ -119,17 +154,23 @@ with open(argv[1], 'rt') as fh:
 			if context == '[net]':
 				N = Net(pset['width'], pset['height'], pset['channels'])
 			elif context == '[convolutional]':
-				N.conv(pset['stride'], pset['filters'], pset['size'])
+				N.conv(pset['stride'], pset['filters'], pset['size'], pset['pad'])
 			elif context == '[upsample]':
 				N.upsample(pset['stride'])
 			elif context == '[maxpool]':
-				N.maxpool(pset['stride'], pset['size'])
+				N.maxpool(pset['stride'], pset['size'], pset['padding'])
 			elif context == '[shortcut]':
 				N.shortcut(pset['from'])
+			elif context == '[connected]':
+				N.connected(pset['output'])
 			elif context == '[yolo]':
 				N.yolo()
 			elif context == '[route]':
 				N.route(pset['layers'])
+			elif context == '[dropout]':
+				N.dropout()
+			elif context == '[softmax]':
+				N.softmax()
 			else:
 				if context is not None:
 					print('Unknown context', context)
