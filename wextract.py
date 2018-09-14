@@ -52,6 +52,17 @@ class Net(object):
 			dims = self.dims,
 		))
 
+	def maxpool(self, stride, size):
+		self.dims = dict(
+			w = self.dims['w'] // stride,
+			h = self.dims['h'] // stride,
+			c = self.dims['c'],
+		)
+		self.v.append(dict(
+			type = 'convolve',
+			params = "%dx%d/%dx" % (size, size, stride),
+			dims = self.dims,
+		))
 
 	def route(self, layers):
 		# route will just take info from <layers> and
@@ -111,6 +122,8 @@ with open(argv[1], 'rt') as fh:
 				N.conv(pset['stride'], pset['filters'], pset['size'])
 			elif context == '[upsample]':
 				N.upsample(pset['stride'])
+			elif context == '[maxpool]':
+				N.maxpool(pset['stride'], pset['size'])
 			elif context == '[shortcut]':
 				N.shortcut(pset['from'])
 			elif context == '[yolo]':
