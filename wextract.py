@@ -64,6 +64,16 @@ class Net(object):
 			dims = self.dims,
 		))
 
+	def reorg(self, stride):
+		for x in 'wh':
+			self.dims[x] = self.dims[x] // stride
+		self.dims['c'] = self.dims['c'] * stride * stride
+		self.v.append(dict(
+			type = 'reorg',
+			params = stride,
+			dims = self.dims,
+		))
+
 	def shortcut(self, layer):
 		# elementwise add <layer> to previous layer
 		layer = self._abslayer(layer)
@@ -183,6 +193,8 @@ with open(argv[1], 'rt') as fh:
 				N.conv(pset['stride'], pset['filters'], pset['size'], pset['pad'])
 			elif context == '[local]':
 				N.local(pset['stride'], pset['filters'], pset['size'], pset['pad'])
+			elif context == '[reorg]':
+				N.reorg(pset['stride'])
 			elif context == '[upsample]':
 				N.upsample(pset['stride'])
 			elif context == '[maxpool]':
