@@ -18,11 +18,11 @@ class Net(object):
 		return len(self.v) + layer if layer < 0 else layer
 
 	def conv(self, stride, filters, size, padding=0):
-		if stride == 1:
+		if padding:
 			# assume "same"
 			pad = (size - 1) // 2
 		else:
-			pad = 0 # assumption going on here!
+			pad = 0
 		w = ((self.dims['w'] + 2*pad - size) // stride) + 1
 		h = ((self.dims['h'] + 2*pad - size) // stride) + 1
 		weights = filters * (size * size * self.dims['c'] + 1)
