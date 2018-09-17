@@ -163,6 +163,13 @@ class Net(object):
 			dims = self.dims,
 		))
 
+	def avgpool(self):
+		# average to one val per channel dim
+		self.dims = dict(w=1, h=1, c=self.dims['c'])
+		self.v.append(dict(
+			type = 'avgpool',
+			dims = self.dims,
+		))
 
 
 	def show(self):
@@ -221,6 +228,8 @@ with open(argv[1], 'rt') as fh:
 				N.dropout()
 			elif context == '[softmax]':
 				N.softmax()
+			elif context == '[avgpool]':
+				N.avgpool()
 			elif context == '[crop]':
 				N.crop(pset['crop_width'], pset['crop_height'])
 			else:
