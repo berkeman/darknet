@@ -156,6 +156,14 @@ class Net(object):
 			dims = self.dims,
 		))
 
+	def crop(self, width, height):
+		self.dims = dict(w=width, h=height, c=self.dims['c'])
+		self.v.append(dict(
+			type = 'crop',
+			dims = self.dims,
+		))
+
+
 
 	def show(self):
 		v = self.v
@@ -213,6 +221,8 @@ with open(argv[1], 'rt') as fh:
 				N.dropout()
 			elif context == '[softmax]':
 				N.softmax()
+			elif context == '[crop]':
+				N.crop(pset['crop_width'], pset['crop_height'])
 			else:
 				if context is not None:
 					print('Unknown context', context)
