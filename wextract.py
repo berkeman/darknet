@@ -17,22 +17,39 @@ class Net(object):
 	def _abslayer(self, layer):
 		return len(self.v) + layer if layer < 0 else layer
 
-	def conv(self, stride, filters, size, pad=0):
+	def conv(self, stride, filters, size, padding=0):
 		if stride == 1:
 			# assume "same"
 			pad = (size - 1) // 2
-		macs = filters * size * size * self.dims['c'] * \
-		       self.dims['w'] * self.dims['h'] \
-		       // stride // stride
+		else:
+			pad = 0 # assumption going on here!
+		w = ((self.dims['w'] + 2*pad - size) // stride) + 1
+		h = ((self.dims['h'] + 2*pad - size) // stride) + 1
 		weights = filters * (size * size * self.dims['c'] + 1)
-		self.dims = dict(
-			w = ((self.dims['w'] + 2*pad - size) // stride) + 1,
-			h = ((self.dims['h'] + 2*pad - size) // stride) + 1,
-			c = filters,
-		)
+		macs = (size * size * self.dims['c']) * (w * h * filters)
+		self.dims = dict(w=w, h=h, c=filters,)
 		self.v.append(dict(
 			type = 'convolve',
-			params = "%dx%d/%dx%d" % (size, size, stride, filters),
+			params = "%dx%d/%dx%d%s" % (size, size, stride, filters, 'p' if padding else ''),
+			dims = self.dims,
+			macs = macs,
+			weights = weights,
+		))
+
+	def local(self, stride, filters, size, padding=0):
+		if stride == 1:
+			# assume "same"
+			pad = (size - 1) // 2
+		else:
+			pad = 0 # assumption going on here!
+		w = ((self.dims['w'] + 2*pad - size) // stride) + 1
+		h = ((self.dims['h'] + 2*pad - size) // stride) + 1
+		weights = filters * (size * size * self.dims['c'] + 1) * w * h
+		macs = (size * size * self.dims['c']) * (w * h * filters)
+		self.dims = dict(w=w, h=h, c=filters,)
+		self.v.append(dict(
+			type = 'local',
+			params = "%dx%d/%dx%d%s" % (size, size, stride, filters, 'p' if padding else ''),
 			dims = self.dims,
 			macs = macs,
 			weights = weights,
@@ -100,6 +117,12 @@ class Net(object):
 			dims = {},
 		))
 
+	def detection(self):
+		self.v.append(dict(
+			type = 'detection',
+			dims = {},
+		))
+
 	def connected(self, output):
 		self.dims = dict(w = output, h=1, c=1)
 		x = self.v[-1]['dims']
@@ -143,6 +166,9 @@ class Net(object):
 			x.get('weights', 0),
 		))
 
+
+print("#   layer                        w    h    c         feat         macs      weights")
+print("#----------------------------------------------------------------------------------")
 N = None
 net = {}
 context = None
@@ -155,16 +181,20 @@ with open(argv[1], 'rt') as fh:
 				N = Net(pset['width'], pset['height'], pset['channels'])
 			elif context == '[convolutional]':
 				N.conv(pset['stride'], pset['filters'], pset['size'], pset['pad'])
+			elif context == '[local]':
+				N.local(pset['stride'], pset['filters'], pset['size'], pset['pad'])
 			elif context == '[upsample]':
 				N.upsample(pset['stride'])
 			elif context == '[maxpool]':
-				N.maxpool(pset['stride'], pset['size'], pset['padding'])
+				N.maxpool(pset['stride'], pset['size'], pset.get('padding', 0))
 			elif context == '[shortcut]':
 				N.shortcut(pset['from'])
 			elif context == '[connected]':
 				N.connected(pset['output'])
 			elif context == '[yolo]':
 				N.yolo()
+			elif context == '[detection]':
+				N.detection()
 			elif context == '[route]':
 				N.route(pset['layers'])
 			elif context == '[dropout]':
