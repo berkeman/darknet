@@ -75,9 +75,9 @@ class Net(object):
 		))
 
 	def shortcut(self, layer):
-		# elementwise add <layer> to previous layer
+		# elementwise add <layer> to previous layer, keep aspect of previous
 		layer = self._abslayer(layer)
-		self.dims = self.v[layer]['dims']
+		self.dims = self.v[-1]['dims']
 		self.v.append(dict(
 			type = 'shortcut',
 			params = layer,
