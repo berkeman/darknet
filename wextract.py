@@ -179,7 +179,7 @@ class Net(object):
 		else:
 			x = self.input
 		size = reduce(mul, (x.get('dims', {}).get(key, 0) for key in 'whc'))
-		print("%3d %-12s %-12s %4d %4d %4d %12d %12d %12d" % (
+		print("%3d %-12s %-12s %4d %5d %5d %12d %12d %12d" % (
 			len(v)-1,
 			x['type'],
 			x.get('params', '-'),
@@ -192,8 +192,8 @@ class Net(object):
 		))
 
 
-print("#   layer                        w    h    c         feat         macs      weights")
-print("#----------------------------------------------------------------------------------")
+print("#   layer                        w     h     c         feat         macs      weights")
+print("#------------------------------------------------------------------------------------")
 N = None
 net = {}
 context = None
