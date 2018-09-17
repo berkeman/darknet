@@ -7,6 +7,7 @@
 #include "gemm.h"
 #include <stdio.h>
 #include <time.h>
+#include <stdint.h>
 
 #ifdef AI2
 #include "xnor_layer.h"
@@ -322,11 +323,11 @@ convolutional_layer make_convolutional_layer(int batch, int h, int w, int c, int
     l.workspace_size = get_workspace_size(l);
     l.activation = activation;
 
-    fprintf(stderr, "conv  %5d %2d x%2d /%2d  %4d x%4d x%4d   ->  %4d x%4d x%4d  %12d MACs\n", \
+    fprintf(stderr, "conv  %5d %2d x%2d /%2d  %4d x%4d x%4d   ->  %4d x%4d x%4d  %12llu MACs\n", \
 	    n, size, size, stride, \
 	    w, h, c, \
 	    l.out_w, l.out_h, l.out_c, \
-	    (l.n * l.size*l.size*l.c/l.groups * l.out_h*l.out_w));
+	    (int64_t)((int64_t)l.n * l.size*l.size*l.c/l.groups * l.out_h*l.out_w));
 
     return l;
 }
