@@ -37,6 +37,8 @@ class Net(object):
 		))
 
 	def local(self, stride, filters, size, padding=0):
+		# The "local" layer is similar to the "conv" layer, but it uses
+		# unique weights for each output
 		if stride == 1:
 			# assume "same"
 			pad = (size - 1) // 2
@@ -56,6 +58,7 @@ class Net(object):
 		))
 
 	def upsample(self, stride):
+		# upsample by a fractor of "stride" in width and height
 		for x in 'wh':
 			self.dims[x] = stride * self.dims[x]
 		self.v.append(dict(
@@ -65,6 +68,8 @@ class Net(object):
 		))
 
 	def reorg(self, stride):
+		# Just a reshape.  divide width and height by stride, and
+		# increase the channel depth by stride^2.
 		for x in 'wh':
 			self.dims[x] = self.dims[x] // stride
 		self.dims['c'] = self.dims['c'] * stride * stride
@@ -85,6 +90,7 @@ class Net(object):
 		))
 
 	def maxpool(self, stride, size, padding):
+		# Simple maxpool layer
 		if stride == 1:
 			# assume "same"
 			pad = (size - 1) // 2
@@ -102,10 +108,9 @@ class Net(object):
 		))
 
 	def route(self, layers):
-		# route will just take info from <layers> and
-		# concatenate them (if more than one)
-		# without any processing.
-		# (Same as "concat" in Caffee, I've been told.)
+		# route will just take info from <layers> and concatenate them
+		# (if more than one) without any processing.  (Same as
+		# "concat" in Caffee, I've been told.)
 		layers = [self._abslayer(x) for x in layers]
 		if len(layers) == 1:
 			self.dims = self.v[layers[0]]['dims']
@@ -134,6 +139,7 @@ class Net(object):
 		))
 
 	def connected(self, output):
+		# "Fully connected"-layer
 		self.dims = dict(w = output, h=1, c=1)
 		x = self.v[-1]['dims']
 		macs = output * x['w'] * x['h'] * x['c']
@@ -157,6 +163,7 @@ class Net(object):
 		))
 
 	def crop(self, width, height):
+		# crop to new width and height.
 		self.dims = dict(w=width, h=height, c=self.dims['c'])
 		self.v.append(dict(
 			type = 'crop',
@@ -164,7 +171,7 @@ class Net(object):
 		))
 
 	def avgpool(self):
-		# average to one val per channel dim
+		# average spatially to one val per channel dimension
 		self.dims = dict(w=1, h=1, c=self.dims['c'])
 		self.v.append(dict(
 			type = 'avgpool',
