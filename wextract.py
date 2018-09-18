@@ -171,6 +171,12 @@ class Net(object):
 			dims = self.dims,
 		))
 
+	def region(self):
+		self.v.append(dict(
+			type = 'region',
+			dims = self.dims,
+		))
+
 
 	def show(self):
 		v = self.v
@@ -230,6 +236,8 @@ with open(argv[1], 'rt') as fh:
 				N.softmax()
 			elif context == '[avgpool]':
 				N.avgpool()
+			elif context == '[region]':
+				N.region()
 			elif context == '[crop]':
 				N.crop(pset['crop_width'], pset['crop_height'])
 			else:
