@@ -1,5 +1,5 @@
 #!/bin/bash
-for x in alexnet darknet53 densenet201 resnet152 vgg-16 vgg-conv yolov1 yolov2 yolov3;\
+for x in alexnet darknet53 densenet201 resnet152 vgg-16 vgg-conv yolov1 yolov2 yolov3 yolov3-tiny;\
 do \
   python3 wextract.py cfg/${x}.cfg | python3 averager.py > out/${x}.out; \
 done	     
