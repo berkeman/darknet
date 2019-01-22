@@ -19,11 +19,6 @@ void swap_binary(convolutional_layer *l)
     l->weights = l->binary_weights;
     l->binary_weights = swap;
 
-#ifdef GPU
-    swap = l->weights_gpu;
-    l->weights_gpu = l->binary_weights_gpu;
-    l->binary_weights_gpu = swap;
-#endif
 }
 
 void binarize_weights(float *weights, int n, int size, float *binary)
@@ -119,60 +114,6 @@ static size_t get_workspace_size(layer l){
     return (size_t)l.out_h*l.out_w*l.size*l.size*l.c/l.groups*sizeof(float);
 }
 
-#ifdef GPU
-#ifdef CUDNN
-void cudnn_convolutional_setup(layer *l)
-{
-    cudnnSetTensor4dDescriptor(l->dsrcTensorDesc, CUDNN_TENSOR_NCHW, CUDNN_DATA_FLOAT, l->batch, l->c, l->h, l->w); 
-    cudnnSetTensor4dDescriptor(l->ddstTensorDesc, CUDNN_TENSOR_NCHW, CUDNN_DATA_FLOAT, l->batch, l->out_c, l->out_h, l->out_w); 
-
-    cudnnSetTensor4dDescriptor(l->srcTensorDesc, CUDNN_TENSOR_NCHW, CUDNN_DATA_FLOAT, l->batch, l->c, l->h, l->w); 
-    cudnnSetTensor4dDescriptor(l->dstTensorDesc, CUDNN_TENSOR_NCHW, CUDNN_DATA_FLOAT, l->batch, l->out_c, l->out_h, l->out_w); 
-    cudnnSetTensor4dDescriptor(l->normTensorDesc, CUDNN_TENSOR_NCHW, CUDNN_DATA_FLOAT, 1, l->out_c, 1, 1); 
-
-    cudnnSetFilter4dDescriptor(l->dweightDesc, CUDNN_DATA_FLOAT, CUDNN_TENSOR_NCHW, l->n, l->c/l->groups, l->size, l->size); 
-    cudnnSetFilter4dDescriptor(l->weightDesc, CUDNN_DATA_FLOAT, CUDNN_TENSOR_NCHW, l->n, l->c/l->groups, l->size, l->size); 
-    #if CUDNN_MAJOR >= 6
-    cudnnSetConvolution2dDescriptor(l->convDesc, l->pad, l->pad, l->stride, l->stride, 1, 1, CUDNN_CROSS_CORRELATION, CUDNN_DATA_FLOAT);
-    #else
-    cudnnSetConvolution2dDescriptor(l->convDesc, l->pad, l->pad, l->stride, l->stride, 1, 1, CUDNN_CROSS_CORRELATION);
-    #endif
-
-    #if CUDNN_MAJOR >= 7
-    cudnnSetConvolutionGroupCount(l->convDesc, l->groups);
-    #else
-    if(l->groups > 1){
-        error("CUDNN < 7 doesn't support groups, please upgrade!");
-    }
-    #endif
-
-    cudnnGetConvolutionForwardAlgorithm(cudnn_handle(),
-            l->srcTensorDesc,
-            l->weightDesc,
-            l->convDesc,
-            l->dstTensorDesc,
-            CUDNN_CONVOLUTION_FWD_SPECIFY_WORKSPACE_LIMIT,
-            2000000000,
-            &l->fw_algo);
-    cudnnGetConvolutionBackwardDataAlgorithm(cudnn_handle(),
-            l->weightDesc,
-            l->ddstTensorDesc,
-            l->convDesc,
-            l->dsrcTensorDesc,
-            CUDNN_CONVOLUTION_BWD_DATA_SPECIFY_WORKSPACE_LIMIT,
-            2000000000,
-            &l->bd_algo);
-    cudnnGetConvolutionBackwardFilterAlgorithm(cudnn_handle(),
-            l->srcTensorDesc,
-            l->ddstTensorDesc,
-            l->convDesc,
-            l->dweightDesc,
-            CUDNN_CONVOLUTION_BWD_FILTER_SPECIFY_WORKSPACE_LIMIT,
-            2000000000,
-            &l->bf_algo);
-}
-#endif
-#endif
 
 convolutional_layer make_convolutional_layer(int batch, int h, int w, int c, int n, int groups, int size, int stride, int padding, ACTIVATION activation, int batch_normalize, int binary, int xnor, int adam)
 {
@@ -259,67 +200,6 @@ convolutional_layer make_convolutional_layer(int batch, int h, int w, int c, int
         l.scale_v = calloc(n, sizeof(float));
     }
 
-#ifdef GPU
-    l.forward_gpu = forward_convolutional_layer_gpu;
-    l.backward_gpu = backward_convolutional_layer_gpu;
-    l.update_gpu = update_convolutional_layer_gpu;
-
-    if(gpu_index >= 0){
-        if (adam) {
-            l.m_gpu = cuda_make_array(l.m, l.nweights);
-            l.v_gpu = cuda_make_array(l.v, l.nweights);
-            l.bias_m_gpu = cuda_make_array(l.bias_m, n);
-            l.bias_v_gpu = cuda_make_array(l.bias_v, n);
-            l.scale_m_gpu = cuda_make_array(l.scale_m, n);
-            l.scale_v_gpu = cuda_make_array(l.scale_v, n);
-        }
-
-        l.weights_gpu = cuda_make_array(l.weights, l.nweights);
-        l.weight_updates_gpu = cuda_make_array(l.weight_updates, l.nweights);
-
-        l.biases_gpu = cuda_make_array(l.biases, n);
-        l.bias_updates_gpu = cuda_make_array(l.bias_updates, n);
-
-        l.delta_gpu = cuda_make_array(l.delta, l.batch*out_h*out_w*n);
-        l.output_gpu = cuda_make_array(l.output, l.batch*out_h*out_w*n);
-
-        if(binary){
-            l.binary_weights_gpu = cuda_make_array(l.weights, l.nweights);
-        }
-        if(xnor){
-            l.binary_weights_gpu = cuda_make_array(l.weights, l.nweights);
-            l.binary_input_gpu = cuda_make_array(0, l.inputs*l.batch);
-        }
-
-        if(batch_normalize){
-            l.mean_gpu = cuda_make_array(l.mean, n);
-            l.variance_gpu = cuda_make_array(l.variance, n);
-
-            l.rolling_mean_gpu = cuda_make_array(l.mean, n);
-            l.rolling_variance_gpu = cuda_make_array(l.variance, n);
-
-            l.mean_delta_gpu = cuda_make_array(l.mean, n);
-            l.variance_delta_gpu = cuda_make_array(l.variance, n);
-
-            l.scales_gpu = cuda_make_array(l.scales, n);
-            l.scale_updates_gpu = cuda_make_array(l.scale_updates, n);
-
-            l.x_gpu = cuda_make_array(l.output, l.batch*out_h*out_w*n);
-            l.x_norm_gpu = cuda_make_array(l.output, l.batch*out_h*out_w*n);
-        }
-#ifdef CUDNN
-        cudnnCreateTensorDescriptor(&l.normTensorDesc);
-        cudnnCreateTensorDescriptor(&l.srcTensorDesc);
-        cudnnCreateTensorDescriptor(&l.dstTensorDesc);
-        cudnnCreateFilterDescriptor(&l.weightDesc);
-        cudnnCreateTensorDescriptor(&l.dsrcTensorDesc);
-        cudnnCreateTensorDescriptor(&l.ddstTensorDesc);
-        cudnnCreateFilterDescriptor(&l.dweightDesc);
-        cudnnCreateConvolutionDescriptor(&l.convDesc);
-        cudnn_convolutional_setup(&l);
-#endif
-    }
-#endif
     l.workspace_size = get_workspace_size(l);
     l.activation = activation;
 
@@ -392,24 +272,6 @@ void resize_convolutional_layer(convolutional_layer *l, int w, int h)
         l->x_norm  = realloc(l->x_norm, l->batch*l->outputs*sizeof(float));
     }
 
-#ifdef GPU
-    cuda_free(l->delta_gpu);
-    cuda_free(l->output_gpu);
-
-    l->delta_gpu =  cuda_make_array(l->delta,  l->batch*l->outputs);
-    l->output_gpu = cuda_make_array(l->output, l->batch*l->outputs);
-
-    if(l->batch_normalize){
-        cuda_free(l->x_gpu);
-        cuda_free(l->x_norm_gpu);
-
-        l->x_gpu = cuda_make_array(l->output, l->batch*l->outputs);
-        l->x_norm_gpu = cuda_make_array(l->output, l->batch*l->outputs);
-    }
-#ifdef CUDNN
-    cudnn_convolutional_setup(l);
-#endif
-#endif
     l->workspace_size = get_workspace_size(*l);
 }
 

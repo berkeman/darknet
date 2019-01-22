@@ -42,12 +42,6 @@ layer make_iseg_layer(int batch, int w, int h, int classes, int ids)
 
     l.forward = forward_iseg_layer;
     l.backward = backward_iseg_layer;
-#ifdef GPU
-    l.forward_gpu = forward_iseg_layer_gpu;
-    l.backward_gpu = backward_iseg_layer_gpu;
-    l.output_gpu = cuda_make_array(l.output, batch*l.outputs);
-    l.delta_gpu = cuda_make_array(l.delta, batch*l.outputs);
-#endif
 
     fprintf(stderr, "iseg\n");
     srand(0);
@@ -66,13 +60,6 @@ void resize_iseg_layer(layer *l, int w, int h)
     l->output = realloc(l->output, l->batch*l->outputs*sizeof(float));
     l->delta = realloc(l->delta, l->batch*l->outputs*sizeof(float));
 
-#ifdef GPU
-    cuda_free(l->delta_gpu);
-    cuda_free(l->output_gpu);
-
-    l->delta_gpu =     cuda_make_array(l->delta, l->batch*l->outputs);
-    l->output_gpu =    cuda_make_array(l->output, l->batch*l->outputs);
-#endif
 }
 
 void forward_iseg_layer(const layer l, network net)
@@ -84,12 +71,10 @@ void forward_iseg_layer(const layer l, network net)
     memcpy(l.output, net.input, l.outputs*l.batch*sizeof(float));
     memset(l.delta, 0, l.outputs * l.batch * sizeof(float));
 
-#ifndef GPU
     for (b = 0; b < l.batch; ++b){
         int index = b*l.outputs;
         activate_array(l.output + index, l.classes*l.w*l.h, LOGISTIC);
     }
-#endif
 
     for (b = 0; b < l.batch; ++b){
         // a priori, each pixel has no class
@@ -197,29 +182,4 @@ void backward_iseg_layer(const layer l, network net)
     axpy_cpu(l.batch*l.inputs, 1, l.delta, 1, net.delta, 1);
 }
 
-#ifdef GPU
-
-void forward_iseg_layer_gpu(const layer l, network net)
-{
-    copy_gpu(l.batch*l.inputs, net.input_gpu, 1, l.output_gpu, 1);
-    int b;
-    for (b = 0; b < l.batch; ++b){
-        activate_array_gpu(l.output_gpu + b*l.outputs, l.classes*l.w*l.h, LOGISTIC);
-        //if(l.extra) activate_array_gpu(l.output_gpu + b*l.outputs + l.classes*l.w*l.h, l.extra*l.w*l.h, LOGISTIC);
-    }
-
-    cuda_pull_array(l.output_gpu, net.input, l.batch*l.inputs);
-    forward_iseg_layer(l, net);
-    cuda_push_array(l.delta_gpu, l.delta, l.batch*l.outputs);
-}
-
-void backward_iseg_layer_gpu(const layer l, network net)
-{
-    int b;
-    for (b = 0; b < l.batch; ++b){
-        //if(l.extra) gradient_array_gpu(l.output_gpu + b*l.outputs + l.classes*l.w*l.h, l.extra*l.w*l.h, LOGISTIC, l.delta_gpu + b*l.outputs + l.classes*l.w*l.h);
-    }
-    axpy_gpu(l.batch*l.inputs, 1, l.delta_gpu, 1, net.delta_gpu, 1);
-}
-#endif
 

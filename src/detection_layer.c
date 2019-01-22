@@ -34,12 +34,6 @@ detection_layer make_detection_layer(int batch, int inputs, int n, int side, int
 
     l.forward = forward_detection_layer;
     l.backward = backward_detection_layer;
-#ifdef GPU
-    l.forward_gpu = forward_detection_layer_gpu;
-    l.backward_gpu = backward_detection_layer_gpu;
-    l.output_gpu = cuda_make_array(l.output, batch*l.outputs);
-    l.delta_gpu = cuda_make_array(l.delta, batch*l.outputs);
-#endif
 
     fprintf(stderr, "Detection Layer\n");
     srand(0);
@@ -251,25 +245,4 @@ void get_detection_detections(layer l, int w, int h, float thresh, detection *de
     }
 }
 
-#ifdef GPU
-
-void forward_detection_layer_gpu(const detection_layer l, network net)
-{
-    if(!net.train){
-        copy_gpu(l.batch*l.inputs, net.input_gpu, 1, l.output_gpu, 1);
-        return;
-    }
-
-    cuda_pull_array(net.input_gpu, net.input, l.batch*l.inputs);
-    forward_detection_layer(l, net);
-    cuda_push_array(l.output_gpu, l.output, l.batch*l.outputs);
-    cuda_push_array(l.delta_gpu, l.delta, l.batch*l.inputs);
-}
-
-void backward_detection_layer_gpu(detection_layer l, network net)
-{
-    axpy_gpu(l.batch*l.inputs, 1, l.delta_gpu, 1, net.delta_gpu, 1);
-    //copy_gpu(l.batch*l.inputs, l.delta_gpu, 1, net.delta_gpu, 1);
-}
-#endif
 

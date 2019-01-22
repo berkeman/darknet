@@ -23,14 +23,6 @@ layer make_l2norm_layer(int batch, int inputs)
 
     l.forward = forward_l2norm_layer;
     l.backward = backward_l2norm_layer;
-    #ifdef GPU
-    l.forward_gpu = forward_l2norm_layer_gpu;
-    l.backward_gpu = backward_l2norm_layer_gpu;
-
-    l.output_gpu = cuda_make_array(l.output, inputs*batch); 
-    l.scales_gpu = cuda_make_array(l.output, inputs*batch); 
-    l.delta_gpu = cuda_make_array(l.delta, inputs*batch); 
-    #endif
     return l;
 }
 
@@ -46,18 +38,3 @@ void backward_l2norm_layer(const layer l, network net)
     axpy_cpu(l.inputs*l.batch, 1, l.delta, 1, net.delta, 1);
 }
 
-#ifdef GPU
-
-void forward_l2norm_layer_gpu(const layer l, network net)
-{
-    copy_gpu(l.outputs*l.batch, net.input_gpu, 1, l.output_gpu, 1);
-    l2normalize_gpu(l.output_gpu, l.scales_gpu, l.batch, l.out_c, l.out_w*l.out_h);
-}
-
-void backward_l2norm_layer_gpu(const layer l, network net)
-{
-    axpy_gpu(l.batch*l.inputs, 1, l.scales_gpu, 1, l.delta_gpu, 1);
-    axpy_gpu(l.batch*l.inputs, 1, l.delta_gpu, 1, net.delta_gpu, 1);
-}
-
-#endif

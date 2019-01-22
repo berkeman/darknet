@@ -14,10 +14,6 @@ void resize_avgpool_layer(avgpool_layer *l, int w, int h);
 void forward_avgpool_layer(const avgpool_layer l, network net);
 void backward_avgpool_layer(const avgpool_layer l, network net);
 
-#ifdef GPU
-void forward_avgpool_layer_gpu(avgpool_layer l, network net);
-void backward_avgpool_layer_gpu(avgpool_layer l, network net);
-#endif
 
 #endif
 
