@@ -17,7 +17,7 @@ class Net(object):
 	def _abslayer(self, layer):
 		return len(self.v) + layer if layer < 0 else layer
 
-	def conv(self, stride, filters, size, padding=0):
+	def conv(self, stride, filters, size, padding=0, groups=1):
 		if padding:
 			# assume "same"
 			pad = (size - 1) // 2
@@ -25,12 +25,12 @@ class Net(object):
 			pad = 0
 		w = ((self.dims['w'] + 2*pad - size) // stride) + 1
 		h = ((self.dims['h'] + 2*pad - size) // stride) + 1
-		weights = filters * (size * size * self.dims['c'] + 1)
-		macs = (size * size * self.dims['c']) * (w * h * filters)
-		self.dims = dict(w=w, h=h, c=filters,)
+		weights = (filters * groups) * (size * size * self.dims['c'] / groups + groups)
+		macs = (size * size * self.dims['c'] / groups) * (w * h * filters * groups)
+		self.dims = dict(w=w, h=h, c=filters * groups,)
 		self.v.append(dict(
 			type = 'convolve',
-			params = "%dx%d/%dx%d%s" % (size, size, stride, filters, 'p' if padding else ''),
+			params = "%dx%d%s/%dx%d%s" % (size, size, 'DW' if groups == self.dims['c'] else '', stride, filters * groups, 'p' if padding else ''),
 			dims = self.dims,
 			macs = macs,
 			weights = weights,
@@ -218,7 +218,7 @@ with open(argv[1], 'rt') as fh:
 			if context == '[net]':
 				N = Net(pset['width'], pset['height'], pset['channels'])
 			elif context == '[convolutional]':
-				N.conv(pset['stride'], pset['filters'], pset['size'], pset['pad'])
+				N.conv(pset['stride'], pset['filters'], pset['size'], pset['pad'], pset.get('groups', 1))
 			elif context == '[local]':
 				N.local(pset['stride'], pset['filters'], pset['size'], pset['pad'])
 			elif context == '[reorg]':
