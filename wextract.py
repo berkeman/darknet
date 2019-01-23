@@ -218,6 +218,7 @@ with open(argv[1], 'rt') as fh:
 			if context == '[net]':
 				N = Net(pset['width'], pset['height'], pset['channels'])
 			elif context == '[convolutional]':
+				assert 'padding' not in pset, 'pad in conv, padding in maxpool'
 				N.conv(pset['stride'], pset['filters'], pset['size'], pset['pad'], pset.get('groups', 1))
 			elif context == '[local]':
 				N.local(pset['stride'], pset['filters'], pset['size'], pset['pad'])
@@ -226,6 +227,7 @@ with open(argv[1], 'rt') as fh:
 			elif context == '[upsample]':
 				N.upsample(pset['stride'])
 			elif context == '[maxpool]':
+				assert 'pad' not in pset, 'pad in conv, padding in maxpool'
 				N.maxpool(pset['stride'], pset['size'], pset.get('padding', 0))
 			elif context == '[shortcut]':
 				N.shortcut(pset['from'])
