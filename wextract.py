@@ -25,15 +25,28 @@ class Net(object):
 			pad = 0
 		w = ((self.dims['w'] + 2*pad - size) // stride) + 1
 		h = ((self.dims['h'] + 2*pad - size) // stride) + 1
-		weights = (filters * groups) * (size * size * self.dims['c'] / groups + groups)
-		macs = (size * size * self.dims['c'] / groups) * (w * h * filters * groups)
-		self.dims = dict(w=w, h=h, c=filters * groups,)
-		self.v.append(dict(
-			type = 'convolve',
-			params = "%dx%d%s/%dx%d%s" % (size, size, 'DW' if groups == self.dims['c'] else '', stride, filters * groups, 'p' if padding else ''),
-			dims = self.dims,
-			macs = macs,
-			weights = weights,
+		if self.dims['c'] == groups:
+			# is Depth wise
+			weights = (size * size * groups + groups) + (groups * groups + groups)
+			macs = (w * h * size * size * groups) + (groups * groups)
+			self.dims = dict(w=w, h=h, c=groups,)
+			self.v.append(dict(
+				type = 'convolve',
+				params = "%dx%d%s/%dx%d%s" % (size, size, 'DW', stride, filters, 'p' if padding else ''),
+				dims = self.dims,
+				macs = macs,
+				weights = weights,
+			))
+		else:
+			weights = (filters * groups) * (size * size * self.dims['c'] / groups + groups)
+			macs = (size * size * self.dims['c'] / groups) * (w * h * filters * groups)
+			self.dims = dict(w=w, h=h, c=filters * groups,)
+			self.v.append(dict(
+				type = 'convolve',
+				params = "%dx%d%s/%dx%d%s" % (size, size, '', stride, filters * groups, 'p' if padding else ''),
+				dims = self.dims,
+				macs = macs,
+				weights = weights,
 		))
 
 	def local(self, stride, filters, size, padding=0):
