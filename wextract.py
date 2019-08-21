@@ -280,3 +280,8 @@ with open(argv[1], 'rt') as fh:
 				except Exception:
 					pass
 			pset[param] = value
+
+	accmac = 0
+	for item in N.v:
+		accmac += item.get('macs', 0)
+	print(accmac)
