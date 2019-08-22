@@ -24,37 +24,27 @@ class nndata():
 N = nndata('darknet_run.txt')
 
 N.nextlayer()
-print(N.biases)
-print(N.stride)
+N.nextlayer()
 
-x = N.inputs
-f = N.weights
-L = N.h_in*N.w_in
-print(N.h_in, N.w_in, len(x), 4+2*L)
+print(N.w_in, N.h_in, N.c_in, '->', N.w_ut, N.h_ut, N.c_ut)
+print(N.k, N.stride, N.pad)
+print()
 
-print('x', N.h_in, N.h_ut, N.c_in, N.c_ut)
-
-assert N.stride == 2
-
-y = x[4]*f[4] + x[5]*f[5] + x[7]*f[7] + x[8]*f[8] +\
-x[4+L]*f[13] + x[5+L]*f[14] + x[7+L]*f[16] + x[8+L]*f[17] +\
-x[4+2*L]*f[22] + x[5+2*L]*f[23] + x[7+2*L]*f[25] + x[8+2*L]*f[26]
-
-print(y)
-print(N.outputs[0])
+# @@@ Still only one output channel
+# @@@ Does not handle groups
 
 for h in range(0, N.h_in, N.stride):
 	for w in range(0, N.w_in, N.stride):
 		t = 0.0
-		for c in range(0,3):
-			for x in range(-1,2):
-				for y in range(-1,2):
+		for cc in range(0, N.c_in): # channel
+			for x in range(-(N.k//2), N.k//2 + 1):
+				for y in range(-(N.k//2), N.k//2 + 1):
 					ww = w + x
 					hh = h + y
 					if ww < 0 or ww > N.w_in: continue
 					if hh < 0 or hh > N.h_in: continue
-#					print('[', ww + hh*N.w_in + c*N.w_in*N.h_in, x + N.k*y +c*N.k*N.k, ']')
-					t += N.inputs[ww + hh*N.w_in + c*N.w_in*N.h_in] * N.weights[x + 1 + N.k*(y + 1) +c*N.k*N.k]
+					t += N.inputs[ww + hh*N.w_in + cc*N.w_in*N.h_in] * N.weights[x + N.pad + N.k*(y + N.pad) +cc*N.k*N.k]
+					print(w, h, x, y, cc, ww + hh*N.w_in + cc*N.w_in*N.h_in, x + N.pad + N.k*(y + N.pad) +cc*N.k*N.k)
 
 		y = N.outputs[w//N.stride + (h//N.stride)*N.w_ut]
-		print(w, h, t, y, t/y, 0.97 < t/y < 1.03)
+		print(w, h, t, y, t-y, abs(t-y) < 1e-5)
