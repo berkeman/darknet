@@ -312,7 +312,8 @@ void backward_bias(float *bias_updates, float *delta, int batch, int n, int size
 void forward_convolutional_layer(convolutional_layer l, network net)
 {
     int i, j;
-
+    // fill_cpu(numel, value, dest, increment)
+    // fyll hela dest med nollor
     fill_cpu(l.outputs*l.batch, 0, l.output, 1);
 
     if(l.xnor){
@@ -322,10 +323,30 @@ void forward_convolutional_layer(convolutional_layer l, network net)
         net.input = l.binary_input;
     }
 
+    printf("x %d %d %d %d %d %d %d\n", l.h, l.w, l.c, l.groups, l.size, l.n, l.stride);
+    printf("y %d %d %d %d\n" , l.out_h, l.out_w, l.out_c, l.pad);
+    printf("z %d %d \n", l.workspace_size, l.out_h * l.out_w * l.out_c);
+    // weights
+    for(i=0;i < l.nweights; i++) {
+        printf("%f ", l.weights[i]);
+    }
+    printf("\n");
+    // biases
+    for(i=0;i < l.nbiases; i++) {
+        printf("%f ", l.biases[i]);
+    }
+    printf("\n");
+    // inputs
+    for(i=0;i < l.h * l.w * l.c; i++) {
+        printf("%f ", net.input[i]);
+    }
+    printf("\n");
+    
     int m = l.n/l.groups;
     int k = l.size*l.size*l.c/l.groups;
     int n = l.out_w*l.out_h;
     for(i = 0; i < l.batch; ++i){
+        // här är vi en gång per convlayer!
         for(j = 0; j < l.groups; ++j){
             float *a = l.weights + j*l.nweights/l.groups;
             float *b = net.workspace;
@@ -340,6 +361,12 @@ void forward_convolutional_layer(convolutional_layer l, network net)
             gemm(0,0,m,n,k,1,a,k,b,n,1,c,n);
         }
     }
+
+    // outputs
+    for(i=0;i < l.out_h * l.out_w * l.out_c; i++) {
+        printf("%f ", l.output[i]);
+    }
+    printf("\n");
 
     if(l.batch_normalize){
         forward_batchnorm_layer(l, net);
