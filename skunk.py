@@ -26,29 +26,45 @@ def checkconvlayer(N):
 	print(N.k, N.groups, N.stride, N.pad)
 	print()
 
-	# @@@ Still only one output channel
+	W = N.w_in
+	H = N.h_in
+	C = N.c_in
+	G = N.groups
+	P = N.pad
+	K = N.k
+
 	# @@@ Does not handle groups
+
+	errs = 0
 
 	for h in range(0, N.h_in, N.stride):
 		for w in range(0, N.w_in, N.stride):
-			t = 0.0
 			for g in range(0, N.groups):
-				for cc in range(0, N.c_in//N.groups):
-					for y in range(-(N.k//2), N.k//2 + 1):
-						for x in range(-(N.k//2), N.k//2 + 1):
+				t = 0.0
+				for c in range(0, C//G):
+					for y in range(-(K//2), K//2 + 1):
+						for x in range(-(K//2), K//2 + 1):
 							ww = w + x
 							hh = h + y
-							if ww < 0 or ww > N.w_in: continue
-							if hh < 0 or hh > N.h_in: continue
-							six = ww + hh*N.w_in + g*cc*N.w_in*N.h_in//N.groups
-							wix = x + N.pad + N.k*(y + N.pad) +cc*N.k*N.k + g*N.k*N.k*N.c_in//N.groups
+							if ww < 0 or ww >= W: continue
+							if hh < 0 or hh >= H: continue
+
+							six =  ww     + W*hh      + W*H*(c + g*C//G)
+							wix = (x + P) + K*(y + P) + K*K*(c + g*C//G)
+
+							tix = w//N.stride + (h//N.stride)*N.w_ut + g*H*W//N.stride//N.stride
+
 							t += N.inputs[six] * N.weights[wix]
-							print(w, h, x, y, g, cc, six, wix, N.inputs[six], N.weights[wix])
 
-				y = N.outputs[w//N.stride + (h//N.stride)*N.w_ut]
-				print(w, h, g, t, y, t-y, abs(t-y) < 1e-5)
+							print("%3d %3d - %d %d - %2d %2d - %6d %6d - %f %f" % (w, h, x, y, g, c, six, wix, N.inputs[six], N.weights[wix]))
 
+				yy = N.outputs[tix]
+				print(w, h, '-', c, g, '-', t, yy, t-yy, abs(t-yy) < 1e-5)
+				if abs(t - yy) >= 1e-5:
 
+					errs += 1
+
+	print('errs', errs)
 
 N = nndata('darknet_run.txt')
 
