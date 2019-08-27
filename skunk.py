@@ -24,7 +24,6 @@ class nndata():
 def checkconvlayer(N):
 	print(N.w_in, N.h_in, N.c_in, '->', N.w_ut, N.h_ut, N.c_ut)
 	print(N.k, N.groups, N.stride, N.pad)
-	print()
 
 	W = N.w_in
 	H = N.h_in
@@ -36,6 +35,7 @@ def checkconvlayer(N):
 	# @@@ Does not handle groups
 
 	errs = 0
+	maxerr = 0
 
 	for h in range(0, N.h_in, N.stride):
 		for w in range(0, N.w_in, N.stride):
@@ -51,27 +51,19 @@ def checkconvlayer(N):
 
 							six =  ww     + W*hh      + W*H*(c + g*C//G)
 							wix = (x + P) + K*(y + P) + K*K*(c + g*C//G)
-
 							tix = w//N.stride + (h//N.stride)*N.w_ut + g*H*W//N.stride//N.stride
-
 							t += N.inputs[six] * N.weights[wix]
-
-							print("%3d %3d - %d %d - %2d %2d - %6d %6d - %f %f" % (w, h, x, y, g, c, six, wix, N.inputs[six], N.weights[wix]))
-
 				yy = N.outputs[tix]
-				print(w, h, '-', c, g, '-', t, yy, t-yy, abs(t-yy) < 1e-5)
+#				print(w, h, '-', c, g, '-', t, yy, t-yy, abs(t-yy) < 1e-5)
 				if abs(t - yy) >= 1e-5:
-
 					errs += 1
-
+				maxerr = max(maxerr, abs(t-yy))
 	print('errs', errs)
+	print('maxerr', maxerr)
 
 N = nndata('darknet_run.txt')
 
-N.nextlayer()
-#checkconvlayer(N)
-N.nextlayer()
-#checkconvlayer(N)
-
-N.nextlayer()
-checkconvlayer(N)
+for x in range(60):
+	print(x)
+	N.nextlayer()
+	checkconvlayer(N)
