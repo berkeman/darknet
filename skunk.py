@@ -70,6 +70,7 @@ def checkconvlayer(N):
 
 class Memory():
 	def __init__(self, naddr, nwords):
+		print('[Memory create: %d x %d]' % (naddr, nwords,))
 		self.m = [[0 for x in range(nwords)] for y in range(naddr)]
 		self.naddr = naddr
 		self.nwords = nwords
@@ -243,21 +244,18 @@ def unstore(N, mem):
 	return out
 
 
-for x in range(1):
+for x in range(2):
 	print(x)
 	N.nextlayer()
 	N.nextlayer()
-	if N.c_in == N.c_ut and N.k == 1:
+	if N.c_in <= 32 and N.c_ut <= 32 and N.k == 1:
 		mem = store(N, 32)
 		conv1x1(mem, N, 32)
 		out = unstore(N, mem)
 		check(out, N)
 	else:
-		pass
-
-
-	# print('conv')
-	# out = convlayer(N)
-	# print('check')
-	# check(out, N)
-	# print('')
+		print('conv')
+		out = convlayer(N)
+		print('check')
+		check(out, N)
+		print('')
