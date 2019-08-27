@@ -1,0 +1,4 @@
+
+darknet:
+	./darknet classifier predict cfg/imagenet1k.data mobilenet/test.cfg  mobilenet/test.weights mobilenet/cat.jpg > darknet_run.txt
+	python3 skunk.py
