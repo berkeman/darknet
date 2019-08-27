@@ -68,6 +68,24 @@ def checkconvlayer(N):
 		assert False
 
 
+class Memory():
+	def __init__(self, naddr, nwords):
+		self.m = [[0 for x in range(nwords)] for y in range(naddr)]
+		self.naddr = naddr
+		self.nwords = nwords
+
+	def write(self, a, d):
+		assert len(d) == self.nwords
+		assert 0 <= a <= self.naddr
+		self.m[a] = d
+#		print('write %5d' % (a,), ''.join("% 5.2f" % x for x in d))
+
+	def read(self, a):
+		assert 0 <= a <= self.naddr
+		return self.m[a]
+
+
+
 def convlayer(N):
 	print(N.w_in, N.h_in, N.c_in, '->', N.w_ut, N.h_ut, N.c_ut)
 	print(N.k, N.groups, N.stride, N.pad)
@@ -131,26 +149,108 @@ def convlayer(N):
 def check(out, N):
 	errs = 0
 	maxerr = 0
-	print(N.h_ut*N.w_ut*N.c_ut)
+	cnt = 0
 	for ix in range(N.h_ut*N.w_ut*N.c_ut):
 		golden = N.outputs[ix]
 		pred = out[ix]
 		diff = abs(golden - pred)
+		maxerr = max(maxerr, diff)
 		if diff >= 1e-5:
 #			print(ix, golden, pred, diff)
 			errs += 1
-			maxerr = max(maxerr, diff)
+		cnt += 1
 
-	print('errs', errs)
-	print('maxerr', maxerr)
+	print('checked', cnt)
+	print('errs   ', errs)
+	print('maxerr ', maxerr)
+
+
+
+
+def conv1x1(mem, N, nwords):
+	assert N.k == 1
+	assert mem.nwords <= nwords
+	assert N.c_in <= nwords
+	assert N.c_ut <= nwords
+	assert N.groups == 1
+
+	print('conv1x1')
+	print('   ', N.w_in, N.h_in, N.c_in, '->', N.w_ut, N.h_ut, N.c_ut)
+	print('   ', N.k, N.groups, N.stride, N.pad)
+
+	W = N.w_in
+	H = N.h_in
+	CI = N.c_in
+	CU = N.c_ut
+
+	for h in range(H):
+		for w in range(W):
+			data = mem.read(w + h*W)
+			t = [0. for _ in range(nwords)]
+			for cu in range(0, CU):
+				weights = N.weights[CI*cu:CI*cu+CI]
+				t[cu] = sum(x * y for x, y in zip(data, weights))
+				mem.write(w + h*W, t)
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 N = nndata('darknet_run.txt')
 
-for x in range(60):
+def store(N, nwords):
+	m = Memory(N.w_in * N.w_ut, nwords)
+	assert N.c_in <= nwords
+	for y in range(N.h_in):
+		for x in range(N.w_in):
+			t = []
+			for c in range(nwords):
+				t.append(N.inputs[x + y*N.w_in + c*N.w_in*N.h_in])
+			m.write(x + y*N.w_in, t)
+	return m
+
+def unstore(N, mem):
+	assert N.c_ut <= mem.nwords
+	out = [0. for _ in range(N.w_ut*N.h_ut*N.c_ut)]
+	for x in range(N.w_ut):
+		for y in range(N.h_ut):
+			data = mem.read(x + y*N.w_ut)
+			for c in range(N.c_ut):
+				out[x + y*N.w_ut + c*N.w_ut*N.h_ut] = data[c]
+	return out
+
+
+for x in range(1):
 	print(x)
 	N.nextlayer()
-	print('conv')
-	out = convlayer(N)
-	print('check')
-	check(out, N)
-	print('')
+	N.nextlayer()
+	if N.c_in == N.c_ut and N.k == 1:
+		mem = store(N, 32)
+		conv1x1(mem, N, 32)
+		out = unstore(N, mem)
+		check(out, N)
+	else:
+		pass
+
+
+	# print('conv')
+	# out = convlayer(N)
+	# print('check')
+	# check(out, N)
+	# print('')
