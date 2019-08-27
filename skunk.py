@@ -183,12 +183,19 @@ def conv1x1(mem, N, nwords):
 	CI = N.c_in
 	CU = N.c_ut
 
+	wmem = Memory(CU, nwords)
+	for cu in range(CU):
+		data = [0. for _ in range(nwords)]
+		for ci in range(CI):
+			data[ci] = N.weights[ci + cu*CI]
+		wmem.write(cu, data)
+
 	for h in range(H):
 		for w in range(W):
 			data = mem.read(w + h*W)
 			t = [0. for _ in range(nwords)]
 			for cu in range(0, CU):
-				weights = N.weights[CI*cu:CI*cu+CI]
+				weights = wmem.read(cu)
 				t[cu] = sum(x * y for x, y in zip(data, weights))
 				mem.write(w + h*W, t)
 
