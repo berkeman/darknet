@@ -1,3 +1,4 @@
+from math import ceil
 
 class nndata():
 	def __init__(self, filename):
@@ -168,37 +169,65 @@ def check(out, N):
 
 
 
-def conv1x1(mem, N, nwords):
+def conv1x1(xmem, ymem, N):
 	assert N.k == 1
-	assert mem.nwords <= nwords
-	assert N.c_in <= nwords
-	assert N.c_ut <= nwords
 	assert N.groups == 1
+	assert N.h_in * N.w_in * N.c_in // xmem.nwords <= xmem.naddr
+	assert xmem.nwords == ymem.nwords
 
 	print('conv1x1')
 	print('   ', N.w_in, N.h_in, N.c_in, '->', N.w_ut, N.h_ut, N.c_ut)
 	print('   ', N.k, N.groups, N.stride, N.pad)
+
+	WL = xmem.nwords
 
 	W = N.w_in
 	H = N.h_in
 	CI = N.c_in
 	CU = N.c_ut
 
-	wmem = Memory(CU, nwords)
+	# create and fill weigth memory
+	inblocks = ceil(CI/WL)
+	wmem = Memory(inblocks*CU, WL)
 	for cu in range(CU):
-		data = [0. for _ in range(nwords)]
-		for ci in range(CI):
-			data[ci] = N.weights[ci + cu*CI]
-		wmem.write(cu, data)
+		for ci in range(inblocks):
+			data = []
+			for c in range(WL):
+				srcadr = ci*WL + cu*CI + c
+				if srcadr < N.c_in * N.c_ut:
+					data.append(N.weights[srcadr])
+				else:
+					data.append(0.)
+			wmem.write(ci + cu*inblocks, data)
+	# test it
+	for ci in range(CI):
+		for cu in range(CU):
+			golden = N.weights[ci + cu*CI]
+			wut = wmem.read(ci//WL + cu*inblocks)[ci%WL]
+			assert golden == wut
+
+	utblocks = ceil(CU/WL)
+
+	print('inblocks', inblocks)
+	print('utblocks', utblocks)
 
 	for h in range(H):
 		for w in range(W):
-			data = mem.read(w + h*W)
-			t = [0. for _ in range(nwords)]
-			for cu in range(0, CU):
-				weights = wmem.read(cu)
-				t[cu] = sum(x * y for x, y in zip(data, weights))
-				mem.write(w + h*W, t)
+			for cu in range(utblocks):
+				temp = [0 for _ in range(WL)]
+				for c in range(WL):
+					if cu*WL + c >= CU:
+						# num output channels not divisible by WL
+						continue
+					d = [0. for _ in range(WL)]
+					for ci in range(inblocks):
+						data = xmem.read(w + h*W + ci*W*H)
+#						print(ci, cu, c, WL, inblocks, utblocks, ci + (c + cu*WL)*inblocks)
+						weight = wmem.read(ci + (c + cu*WL)*inblocks)
+						d = [x * y + z for x, y, z in zip(data, weight, d)]
+					temp[c] = sum(d)
+				ymem.write(w + h*W + cu*W*H, temp)
+
 
 
 
@@ -222,6 +251,33 @@ def conv1x1(mem, N, nwords):
 
 N = nndata('darknet_run.txt')
 
+def feat2mem(mem, N):
+	assert N.w_in * N.h_in * N.c_in // mem.nwords <= mem.naddr
+	depth = ceil(N.c_in / mem.nwords)
+	for y in range(N.w_in):
+		for x in range(N.h_in):
+			for chigh in range(depth):
+				dstadr = x + y*N.w_in + chigh*N.w_in*N.h_in
+				word = [0. for _ in range(mem.nwords)]
+				for clow in range(mem.nwords):
+					if chigh*mem.nwords+clow < N.c_in:
+						srcadr = x + y*N.w_in + (chigh*mem.nwords+clow)*N.w_in*N.h_in
+						word[clow] = N.inputs[srcadr]
+					else:
+						word[clow] = 0.0
+				mem.write(dstadr, word)
+
+	for y in range(N.w_in):
+		for x in range(N.h_in):
+			for c in range(N.c_in):
+				goladr = x + y*N.w_in + c*N.w_in*N.h_in
+				futadr = x + y*N.w_in + (c//mem.nwords)*N.w_in*N.h_in
+				golden = N.inputs[goladr]
+				fut = mem.read(futadr)[c%mem.nwords]
+				assert fut == golden
+
+
+
 def store(N, nwords):
 	m = Memory(N.w_in * N.w_ut, nwords)
 	assert N.c_in <= nwords
@@ -234,26 +290,39 @@ def store(N, nwords):
 	return m
 
 def unstore(N, mem):
-	assert N.c_ut <= mem.nwords
+#	assert N.c_ut <= mem.nwords
 	out = [0. for _ in range(N.w_ut*N.h_ut*N.c_ut)]
 	for x in range(N.w_ut):
 		for y in range(N.h_ut):
-			data = mem.read(x + y*N.w_ut)
 			for c in range(N.c_ut):
-				out[x + y*N.w_ut + c*N.w_ut*N.h_ut] = data[c]
+				data = mem.read(x + y*N.w_ut + c//mem.nwords*N.w_ut*N.h_ut)
+				out[x + y*N.w_ut + c*N.w_ut*N.h_ut] = data[c%mem.nwords]
 	return out
 
 
-for x in range(2):
+WL = 32
+
+xmem = Memory(112*112*2, WL)
+ymem = Memory(112*112*5, WL)
+
+for x in range(50):
+	print()
 	print(x)
 	N.nextlayer()
-	N.nextlayer()
-	if N.c_in <= 32 and N.c_ut <= 32 and N.k == 1:
-		mem = store(N, 32)
-		conv1x1(mem, N, 32)
-		out = unstore(N, mem)
+#	if N.c_in <= WL and N.c_ut <= WL and N.k == 1:
+	if N.k == 1:
+		print(N.w_in, N.h_in, N.c_in, '->', N.w_ut, N.h_ut, N.c_ut)
+		print(N.k, N.groups, N.stride, N.pad)
+
+		feat2mem(xmem, N)
+		conv1x1(xmem, ymem, N)
+		out = unstore(N, ymem)
 		check(out, N)
+
+
+
 	else:
+		continue
 		print('conv')
 		out = convlayer(N)
 		print('check')
