@@ -167,22 +167,9 @@ def check(out, N):
 	print('maxerr ', maxerr)
 
 
-
-
-def conv1x1(xmem, ymem, N):
-	assert N.k == 1
-	assert N.groups == 1
-	assert N.h_in * N.w_in * N.c_in // xmem.nwords <= xmem.naddr
-	assert xmem.nwords == ymem.nwords
-
-	print('conv1x1')
-	print('   ', N.w_in, N.h_in, N.c_in, '->', N.w_ut, N.h_ut, N.c_ut)
-	print('   ', N.k, N.groups, N.stride, N.pad)
-
+def create_weight_mem(N):
 	WL = xmem.nwords
 
-	W = N.w_in
-	H = N.h_in
 	CI = N.c_in
 	CU = N.c_ut
 
@@ -205,11 +192,35 @@ def conv1x1(xmem, ymem, N):
 			golden = N.weights[ci + cu*CI]
 			wut = wmem.read(ci//WL + cu*inblocks)[ci%WL]
 			assert golden == wut
+	return wmem
 
+
+
+def conv1x1(xmem, ymem, N):
+	assert N.k == 1
+	assert N.groups == 1
+	assert N.h_in * N.w_in * N.c_in // xmem.nwords <= xmem.naddr
+	assert xmem.nwords == ymem.nwords
+
+	print('conv1x1')
+	print('   ', N.w_in, N.h_in, N.c_in, '->', N.w_ut, N.h_ut, N.c_ut)
+	print('   ', N.k, N.groups, N.stride, N.pad)
+
+	WL = xmem.nwords
+
+	W = N.w_in
+	H = N.h_in
+	CI = N.c_in
+	CU = N.c_ut
+
+	wmem = create_weight_mem(N)
+
+	inblocks = ceil(CI/WL)
 	utblocks = ceil(CU/WL)
 
 	print('inblocks', inblocks)
 	print('utblocks', utblocks)
+
 
 	for h in range(H):
 		for w in range(W):
@@ -222,12 +233,67 @@ def conv1x1(xmem, ymem, N):
 					d = [0. for _ in range(WL)]
 					for ci in range(inblocks):
 						data = xmem.read(w + h*W + ci*W*H)
-#						print(ci, cu, c, WL, inblocks, utblocks, ci + (c + cu*WL)*inblocks)
 						weight = wmem.read(ci + (c + cu*WL)*inblocks)
 						d = [x * y + z for x, y, z in zip(data, weight, d)]
 					temp[c] = sum(d)
 				ymem.write(w + h*W + cu*W*H, temp)
 
+
+
+
+
+
+def printv(x):
+	print(' '.join("%5.2f" % (c,) for c in x))
+
+
+
+
+
+def conv1x1_block(xmem, ymem, N):
+	assert N.k == 1
+	assert N.groups == 1
+	assert N.h_in * N.w_in * N.c_in // xmem.nwords <= xmem.naddr
+	assert xmem.nwords == ymem.nwords
+
+	print('conv1x1_block')
+	print('   ', N.w_in, N.h_in, N.c_in, '->', N.w_ut, N.h_ut, N.c_ut)
+	print('   ', N.k, N.groups, N.stride, N.pad)
+
+	WL = xmem.nwords
+
+	W = N.w_in
+	H = N.h_in
+	CI = N.c_in
+	CU = N.c_ut
+
+	wmem = create_weight_mem(N)
+
+	inblocks = ceil(CI/WL)
+	utblocks = ceil(CU/WL)
+
+	print('inblocks', inblocks)
+	print('utblocks', utblocks)
+
+	def blockdotprod(xv, fv):
+		s = 0
+		for x, f in zip(xv, fv):
+			s += sum(xi * fi for xi, fi in zip(x, f))
+		return s
+
+	for h in range(H):
+		for w in range(W):
+			x = tuple(xmem.read(w + h*W + c*H*W) for c in range(inblocks))  # fetch all input channels
+			for chigh in range(utblocks):
+				t = []
+				for clow in range(WL):
+					cu = chigh*WL + clow # c is output channel
+					if cu < CU:
+						f = tuple(wmem.read(cu*inblocks + c) for c in range(inblocks))
+						t.append(blockdotprod(x, f))
+					else:
+						t.append(0)
+				ymem.write(w + h*W + chigh*W*H, t)
 
 
 
@@ -315,7 +381,7 @@ for x in range(50):
 		print(N.k, N.groups, N.stride, N.pad)
 
 		feat2mem(xmem, N)
-		conv1x1(xmem, ymem, N)
+		conv1x1_block(xmem, ymem, N)
 		out = unstore(N, ymem)
 		check(out, N)
 
