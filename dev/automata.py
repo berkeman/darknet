@@ -40,4 +40,4 @@ def main(urd):
 	)
 
 	jid = urd.build('complexity', datasets=dict(source=jid_type))
-	jid = urd.build('complexity2', jobids=dict(source=jid))
+	jid = urd.build('complexity2', datasets=dict(reslayers=jid + '/reslayers'))
