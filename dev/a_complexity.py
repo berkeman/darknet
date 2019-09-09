@@ -4,8 +4,9 @@ from collections import namedtuple
 
 datasets=('source',)
 
-Layer = namedtuple('Layer', 'layer sx sy groups stride wi hi ci wo ho co')
-ResLayer = namedtuple('ResLayer', 'wi hi wo ho ci cm co stride')
+columns = ('layer', 'sx', 'sy', 'groups', 'stride', 'wi', 'hi', 'ci', 'wo', 'ho', 'co',)
+
+Layer = namedtuple('Layer', columns)
 
 def window(v, N=3):
 	# return tuple (x_n, x_{n+1}, x_{n+N-1}) for each n.
@@ -32,8 +33,9 @@ def synthesis():
 	dw.set_slice(0)
 
 	v = []
-	for data in datasets.source.iterate(None, ('layer', 'sx', 'sy', 'groups', 'stride', 'wi', 'hi', 'ci', 'wo', 'ho', 'co',)):
+	for data in datasets.source.iterate(None, columns):
 		v.append(Layer(*data))
+
 
 	pops = set()
 	for n, (l0, l1, l2) in window(v, 3):
@@ -42,21 +44,14 @@ def synthesis():
 			pops.update({n-2, n-1, n})
 	dw.finish()
 
-	remlayers = [x for n, x in enumerate(v) if n not in pops]
+
 	dw = DatasetWriter(name='remlayers')
-	dw.add('layer', 'unicode')
-	dw.add('sx', 'number')
-	dw.add('sy', 'number')
-	dw.add('groups', 'number')
-	dw.add('stride', 'number')
-	dw.add('wi', 'number')
-	dw.add('hi', 'number')
-	dw.add('ci', 'number')
-	dw.add('wo', 'number')
-	dw.add('ho', 'number')
-	dw.add('co', 'number')
+	for key in columns:
+		dw.add(datasets.source.columns[key].name, datasets.source.columns[key].type)
 	dw.set_slice(0)
 
-	for x in remlayers:
-		dw.write(x.layer, x.sx, x.sy, x.groups, x.stride, x.wi, x.hi, x.ci, x.wo, x.ho, x.co)
+	for n, x in enumerate(v):
+		if n in pops:
+			continue
+		dw.write(*x)
 	dw.finish()
