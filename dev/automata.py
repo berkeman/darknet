@@ -42,3 +42,4 @@ def main(urd):
 	jid = urd.build('complexity',           datasets=dict(source=jid_type))
 	jid = urd.build('reslayer_addmemsizes', datasets=dict(reslayers=jid + '/reslayers'))
 	jid = urd.build('reslayer_ccest',       datasets=dict(source=jid))
+	jid = urd.build('reslayer_printall',    datasets=dict(source=jid))
