@@ -14,9 +14,9 @@ def synthesis():
 		dwcache9      = 9 * cm
 		print(inputfeature, twolinechache, dwcache9)
 
-		mac1 = ci*cm*wi*hi
-		mac2 = wo*ho*9*cm
-		mac3 = wo*ho*cm*co
+		mac1 = wi*hi * ci * cm
+		mac2 = wo*ho *  9 * cm
+		mac3 = wo*ho * cm * co
 		print(mac1, mac2, mac3, mac1+mac2+mac3)
 		m += mac1 + mac2 + mac3
 
