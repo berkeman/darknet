@@ -18,7 +18,7 @@ def main(urd):
 			),
 		)
 	)
-	jid = urd.build('dataset_type',
+	jid_type = urd.build('dataset_type',
 		datasets=dict(source=jid),
 		options=dict(
 			column2type=dict(
@@ -37,3 +37,5 @@ def main(urd):
 			),
 		)
 	)
+
+	jid = urd.build('complexity', datasets=dict(source=jid_type))

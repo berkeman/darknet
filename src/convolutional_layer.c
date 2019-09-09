@@ -208,6 +208,11 @@ convolutional_layer make_convolutional_layer(int batch, int h, int w, int c, int
 	    w, h, c, \
 	    l.out_w, l.out_h, l.out_c, \
 	    (int64_t)((int64_t)l.n * l.size*l.size*l.c/l.groups * l.out_h*l.out_w));
+    fprintf(stdout, "conv,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%llu,\n", \
+	    n, size, size, stride, \
+	    w, h, c, \
+	    l.out_w, l.out_h, l.out_c, \
+	    (int64_t)((int64_t)l.n * l.size*l.size*l.c/l.groups * l.out_h*l.out_w));
 
     return l;
 }
