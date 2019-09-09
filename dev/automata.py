@@ -9,23 +9,24 @@ def main(urd):
 			separator=',',
 			labelsonfirstline=True,
 			allow_bad=False,
-			labels=(
-				'type',
-				'n', 'sx', 'sy', 'stride',
-				'wi', 'hi', 'ci',
-				'wo', 'ho', 'co',
-				'macs',
-			),
+#			labels=(
+#				'type',
+#				'n', 'sx', 'sy', 'stride',
+#				'wi', 'hi', 'ci',
+#				'wo', 'ho', 'co',
+#				'macs',
+#			),
 		)
 	)
 	jid_type = urd.build('dataset_type',
 		datasets=dict(source=jid),
 		options=dict(
 			column2type=dict(
-				type='unicode:UTF-8',
+				layer='unicode:UTF-8',
 				n='number',
 				sx='number',
 				sy='number',
+				groups='number',
 				stride='number',
 				wi='number',
 				hi='number',
@@ -33,7 +34,7 @@ def main(urd):
 				wo='number',
 				ho='number',
 				co='number',
-				macs='number',
+				mac='number',
 			),
 		)
 	)
