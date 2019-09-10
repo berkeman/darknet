@@ -5,7 +5,7 @@ def main(urd):
 
 	jid = urd.build('csvimport',
 		options=dict(
-			filename='nisse',
+			filename='mobilenetv2_formatted_conf.txt',
 			separator=',',
 			labelsonfirstline=True,
 			allow_bad=False,
