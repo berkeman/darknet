@@ -25,7 +25,7 @@ class Memory():
 		print('Memory nwords:', self.nwords)
 
 
-def feat2mem(mem, data, width, height, channels):
+def vec2mem(mem, data, width, height, channels):
 	"""
 	Store "data" in "mem" as a cube "width"x"height"x"channels".
 	There are "mem.nwords" channels per address.
@@ -55,13 +55,23 @@ def feat2mem(mem, data, width, height, channels):
 				assert fut == golden
 
 
-def test_feat2mem():
+def mem2vec(mem, width, height, channels):
+	out = [0. for _ in range(width * height * channels)]
+	for x in range(width):
+		for y in range(height):
+			for c in range(channels):
+				data = mem.read(x + y * width + (c // mem.nwords) * width * height)
+				out[x + y * width + c * width * height] = data[c % mem.nwords]
+	return out
+
+
+def test_vec2mem():
 	# import importlib
 	# importlib.reload(memory)
-	# memory.test_feat2mem()
+	# memory.test_vec2mem()
 	mem = Memory(2*3*5, 2, verbose=True)
 	data = list(range(2*3*5))
-	feat2mem(mem, data, 2, 3, 5)
+	vec2mem(mem, data, 2, 3, 5)
 	for a in range(mem.naddr):
 		print(a, mem.m[a])
 
