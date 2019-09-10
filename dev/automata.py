@@ -9,13 +9,6 @@ def main(urd):
 			separator=',',
 			labelsonfirstline=True,
 			allow_bad=False,
-#			labels=(
-#				'type',
-#				'n', 'sx', 'sy', 'stride',
-#				'wi', 'hi', 'ci',
-#				'wo', 'ho', 'co',
-#				'macs',
-#			),
 		)
 	)
 	jid_type = urd.build('dataset_type',

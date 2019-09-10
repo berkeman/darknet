@@ -17,10 +17,14 @@ def synthesis():
 
 	N = options.N
 
-	dw = DatasetWriter(name='optimal', parent=datasets.source)
-	for key in ncolums:
-		dw.add(key, 'number')
-	dw.set_slice(0)
+	def setupds(name):
+		dw = DatasetWriter(name=name, parent=datasets.source)
+		for key in ncolums:
+			dw.add(key, 'number')
+		dw.set_slice(0)
+		return dw
+
+	dw = setupds('optimal')
 	for x in map(lambda x: ResLayer(*x), datasets.source.iterate(None, columns)):
 		mac1 = x.wi*x.hi * x.ci * x.cm
 		mac2 = x.wo*x.ho *    9 * x.cm
@@ -31,10 +35,7 @@ def synthesis():
 		dw.write(mac1, mac2, mac3, cc1, cc2, cc3)
 	dw.finish()
 
-	dw = DatasetWriter(name='full', parent=datasets.source)
-	for key in ncolums:
-		dw.add(key, 'number')
-	dw.set_slice(0)
+	dw = setupds('full')
 	for x in map(lambda x: ResLayer(*x), datasets.source.iterate(None, columns)):
 		mac1 = 9 * x.wi*x.hi * x.ci * x.cm
 		mac2 = x.wo*x.ho *    9 * x.cm
@@ -45,10 +46,7 @@ def synthesis():
 		dw.write(mac1, mac2, mac3, cc1, cc2, cc3)
 	dw.finish()
 
-	dw = DatasetWriter(name='partial3', parent=datasets.source)
-	for key in ncolums:
-		dw.add(key, 'number')
-	dw.set_slice(0)
+	dw = setupds('partial3')
 	for x in map(lambda x: ResLayer(*x), datasets.source.iterate(None, columns)):
 		mac1 = 3 * x.wi*x.hi * x.ci * x.cm
 		mac2 = x.wo*x.ho *    9 * x.cm
