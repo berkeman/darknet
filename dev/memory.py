@@ -24,6 +24,12 @@ class Memory():
 		print('Memory naddr: ', self.naddr)
 		print('Memory nwords:', self.nwords)
 
+	def importvec(self, data, width, height, channels):
+		vec2mem(self, data, width, height, channels)
+
+	def export(self, width, height, channels):
+		return mem2vec(self, width, height, channels)
+
 
 def vec2mem(mem, data, width, height, channels):
 	"""

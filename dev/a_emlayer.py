@@ -59,9 +59,10 @@ def prepare(SOURCE_DIRECTORY):
 			print(nn.wi, nn.hi, nn.ci, '->', nn.wo, nn.ho, nn.co)
 			print(nn.k, nn.groups, nn.stride, nn.pad)
 
-			memory.vec2mem(xmem, nn.inputs, width=nn.wi, height=nn.hi, channels=nn.ci)
+			xmem.importvec(nn.inputs, width=nn.wi, height=nn.hi, channels=nn.ci)
 			wmem = memory.create_weight_mem_1x1(nn.weights, nwords=WL, channels_in=nn.ci, channels_out=nn.co)
 			convlayer.conv1x1_block(xmem, ymem, wmem, width=nn.wi, height=nn.hi, channels_in=nn.ci, channels_out=nn.co)
-			out = memory.mem2vec(ymem, width=nn.wo, height=nn.ho, channels=nn.co)
+			out = ymem.export(width=nn.wo, height=nn.ho, channels=nn.co)
+			
 
 			check(out, nn.outputs)
