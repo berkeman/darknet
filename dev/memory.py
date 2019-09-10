@@ -26,6 +26,10 @@ class Memory():
 
 
 def feat2mem(mem, data, width, height, channels):
+	"""
+	Store "data" in "mem" as a cube "width"x"height"x"channels".
+	There are "mem.nwords" channels per address.
+	"""
 	assert width * height * channels // mem.nwords <= mem.naddr
 	depth = ceil(channels / mem.nwords)
 	for y in range(height):
@@ -60,3 +64,33 @@ def test_feat2mem():
 	feat2mem(mem, data, 2, 3, 5)
 	for a in range(mem.naddr):
 		print(a, mem.m[a])
+
+
+def create_weight_mem_1x1(weights, nwords, channels_in, channels_out):
+	WL = nwords
+	CI = channels_in
+	CU = channels_out
+	# create and fill weigth memory
+	inblocks = ceil(CI/WL)
+	mem = Memory(inblocks * CU, WL)
+	for cu in range(CU):
+		for ci in range(inblocks):
+			data = []
+			for c in range(WL):
+				srcadr = ci * WL + cu * CI + c
+				if srcadr < channels_in * channels_out:
+					data.append(weights[srcadr])
+				else:
+					data.append(0.)
+			mem.write(ci + cu*inblocks, data)
+	# check
+	for ci in range(CI):
+		for cu in range(CU):
+			golden = weights[ci + cu*CI]
+			wut = mem.read(ci // WL + cu * inblocks)[ci % WL]
+			assert golden == wut
+	return mem
+
+
+#if  __name__ == 'main':
+	

@@ -45,4 +45,4 @@ def prepare(SOURCE_DIRECTORY):
 			print(nn.k, nn.groups, nn.stride, nn.pad)
 
 			memory.feat2mem(xmem, nn.inputs, width=nn.wi, height=nn.hi, channels=nn.ci)
-			
+			wmem = memory.create_weight_mem_1x1(nn.weights, nwords=WL, channels_in=nn.ci, channels_out=nn.co)
