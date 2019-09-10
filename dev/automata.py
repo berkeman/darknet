@@ -36,3 +36,6 @@ def main(urd):
 	jid = urd.build('reslayer_addmemsizes', datasets=dict(reslayers=jid + '/reslayers'))
 	jid = urd.build('reslayer_ccest',       datasets=dict(source=jid))
 	jid = urd.build('reslayer_printall',    datasets=dict(source=jid))
+
+
+	jid = urd.build('emlayer',    options=dict(filename='loggg'))
