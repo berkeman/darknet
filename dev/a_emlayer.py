@@ -42,14 +42,17 @@ def check(xv, yv, thres=1e-5):
 	print('checked', cnt)
 	print('errs   ', errs)
 	print('maxerr ', maxerr)
+	return cnt, errs, maxerr
 
 
-def prepare(SOURCE_DIRECTORY):
+def synthesis(SOURCE_DIRECTORY):
 	nn = nndata(join(SOURCE_DIRECTORY, options.filename))
 
 	WL = 32
 	xmem = memory.Memory(224*224*3, WL)
 	ymem = memory.Memory(112*112*5, WL)
+
+	e = []
 
 	for x in range(54):
 		print()
@@ -63,6 +66,7 @@ def prepare(SOURCE_DIRECTORY):
 			wmem = memory.create_weight_mem_1x1(nn.weights, nwords=WL, channels_in=nn.ci, channels_out=nn.co)
 			convlayer.conv1x1_block(xmem, ymem, wmem, width=nn.wi, height=nn.hi, channels_in=nn.ci, channels_out=nn.co)
 			out = ymem.export(width=nn.wo, height=nn.ho, channels=nn.co)
-			
+			_, _, maxerr = check(out, nn.outputs)
+			e.append(maxerr)
 
-			check(out, nn.outputs)
+	return e

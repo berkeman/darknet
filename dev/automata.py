@@ -1,3 +1,4 @@
+import blob
 
 def main(urd):
 
@@ -39,3 +40,5 @@ def main(urd):
 
 
 	jid = urd.build('emlayer',    options=dict(filename='loggg'))
+
+	print(max(blob.load(jobid=jid)))
