@@ -35,6 +35,7 @@ def vec2mem(mem, data, width, height, channels):
 	"""
 	Store "data" in "mem" as a cube "width"x"height"x"channels".
 	There are "mem.nwords" channels per address.
+	Width first, then height, then channel
 	"""
 	assert width * height * channels // mem.nwords <= mem.naddr
 	depth = ceil(channels / mem.nwords)
@@ -108,5 +109,37 @@ def create_weight_mem_1x1(weights, nwords, channels_in, channels_out):
 	return mem
 
 
+def create_weight_mem_3x3dw(weights, nwords, channels):
+	K = 3
+	chanblocks = ceil(channels / nwords)
+	mem = Memory(K * K * chanblocks, nwords)
+	mem.importvec(weights, K, K, channels)
+	return mem
+
+
+	# K = 3
+	# WL = nwords
+	# C = channels
+	# # create and fill weigth memory
+	# inblocks = ceil(C/WL)
+	# mem = Memory(K * K * inblocks, WL)
+	# for h in range(K):
+	# 	for w in range(K):
+	# 		for chigh in range(inblocks):
+	# 			data = []
+	# 			for clow in range(WL):
+	# 				srcaddr = w + h * K + (clow + chigh * WL) * K * K
+	# 				data.append(weights[srcaddr])
+	# 			mem.write(w + h * K + chigh * K * K, data)
+	# # check
+	# for c in channels:
+	# 	for h in range(K):
+	# 		for w in range(K):
+	# 			wut = mem.read(w + h * K + (c // WL))
+	# 			golden = weights[w + h * K + c * K * K]
+	# 			assert golden == wut[c % WL]
+	# return mem
+
+
 #if  __name__ == 'main':
-	
+

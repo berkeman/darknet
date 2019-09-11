@@ -1,4 +1,5 @@
 from os.path import join
+from math import ceil
 
 from . import memory
 from . import convlayer
@@ -55,10 +56,12 @@ def synthesis(SOURCE_DIRECTORY):
 	e = []
 
 	for x in range(54):
+#	for x in range(4):
 		print()
 		print(x)
 		nn.nextlayer()
 		if nn.k == 1 and nn.groups == 1:
+			print('1x1')
 			print(nn.wi, nn.hi, nn.ci, '->', nn.wo, nn.ho, nn.co)
 			print(nn.k, nn.groups, nn.stride, nn.pad)
 
@@ -68,5 +71,18 @@ def synthesis(SOURCE_DIRECTORY):
 			out = ymem.export(width=nn.wo, height=nn.ho, channels=nn.co)
 			_, _, maxerr = check(out, nn.outputs)
 			e.append(maxerr)
+		elif nn.k == 3 and nn.groups == nn.ci == nn.co and nn.stride == 1:
+			print('3x3dw')
+			print(nn.wi, nn.hi, nn.ci, '->', nn.wo, nn.ho, nn.co)
+			print(nn.k, nn.groups, nn.stride, nn.pad)
+			xmem.importvec(nn.inputs, width=nn.wi, height=nn.hi, channels=nn.ci)
+			wmem = memory.create_weight_mem_3x3dw(nn.weights, nwords=WL, channels=nn.ci)
+			convlayer.conv3x3dw_block(xmem, ymem, wmem, nn.wi, nn.hi, nn.ci, nn.outputs)
+
+
+			out = ymem.export(width=nn.wo, height=nn.ho, channels=nn.co)
+			_, _, maxerr = check(out, nn.outputs)
+			e.append(maxerr)
+
 
 	return e
