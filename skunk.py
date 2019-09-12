@@ -60,7 +60,7 @@ def checkconvlayer(N):
 #								print('b %6d %6d %6d     %2d %2d %2d' % (six, wix, tix, g, ci, cu))
 					yy = N.outputs[tix]
 					if abs(t - yy) >= 1e-5:
-						print(w, h, '  ', x, y, '  ', ci, cu, '     ', t, yy)
+#						print(w, h, '  ', x, y, '  ', ci, cu, '     ', t, yy)
 						errs += 1
 						maxerr = max(maxerr, abs(t-yy))
 	elif G == CI == CU:
@@ -127,6 +127,7 @@ def convlayer(N):
 				ci = 0
 				for cu in range(0, CU):
 					t = 0.0
+#					print('- ', w, h, cu)
 					for y in range(-(K//2), K//2 + 1):
 						for x in range(-(K//2), K//2 + 1):
 							ww = w + x
@@ -139,8 +140,13 @@ def convlayer(N):
 							tix = (w//S) + (h//S)*N.w_ut + (H*W//S//S)*cu
 #							print('dw %6d %6d %3d %3d   %3d %3d   %3d %3d   %f %f' % (six, wix, w, h, ww, hh, ci, cu, N.inputs[six], N.weights[wix]))
 							t += N.inputs[six] * N.weights[wix]
+#							print("%3d %3d %5.2f %5.2f %5.2f" % (six, wix, N.inputs[six], N.weights[wix], t))
 #					print(t, N.outputs[tix])
 					out[tix] = t
+#					print(tix, t)
+#					print()
+#				exit()
+
 		pass
 	else:
 		assert False
@@ -315,7 +321,7 @@ def conv1x1_block(xmem, ymem, N):
 
 
 
-N = nndata('darknet_run.txt')
+N = nndata('loggg')
 
 def feat2mem(mem, N):
 	assert N.w_in * N.h_in * N.c_in // mem.nwords <= mem.naddr
@@ -375,15 +381,35 @@ for x in range(50):
 	print()
 	print(x)
 	N.nextlayer()
+	out = convlayer(N)
+	check(out, N)
+	continue
+
+
+
+
+
+
 #	if N.c_in <= WL and N.c_ut <= WL and N.k == 1:
 	if N.k == 1:
-		print(N.w_in, N.h_in, N.c_in, '->', N.w_ut, N.h_ut, N.c_ut)
-		print(N.k, N.groups, N.stride, N.pad)
+		print("1x1")
 
 		feat2mem(xmem, N)
 		conv1x1_block(xmem, ymem, N)
 		out = unstore(N, ymem)
 		check(out, N)
+
+	elif N.k == 3 and N.stride == 1 and N.c_in == N.c_out == N.groups:
+		print("3x3dw")
+
+		feat2mem(xmem, N)
+		out = convlayer(N)
+		check(out, N)
+
+
+
+
+
 
 
 
