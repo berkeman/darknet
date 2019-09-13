@@ -13,6 +13,10 @@
 #include "xnor_layer.h"
 #endif
 
+#include <stdlib.h>
+
+
+
 void swap_binary(convolutional_layer *l)
 {
     float *swap = l->weights;
@@ -114,13 +118,14 @@ static size_t get_workspace_size(layer l){
     return (size_t)l.out_h*l.out_w*l.size*l.size*l.c/l.groups*sizeof(float);
 }
 
+extern int loepnummer;
 
 convolutional_layer make_convolutional_layer(int batch, int h, int w, int c, int n, int groups, int size, int stride, int padding, ACTIVATION activation, int batch_normalize, int binary, int xnor, int adam)
 {
+
     int i;
     convolutional_layer l = {0};
     l.type = CONVOLUTIONAL;
-
     l.groups = groups;
     l.h = h;
     l.w = w;
@@ -203,17 +208,21 @@ convolutional_layer make_convolutional_layer(int batch, int h, int w, int c, int
     l.workspace_size = get_workspace_size(l);
     l.activation = activation;
 
-    fprintf(stderr, "conv  %5d %2d x%2d /%2d  %4d x%4d x%4d   ->  %4d x%4d x%4d  %12llu MACs\n", \
-	    n, size, size, stride, \
-	    w, h, c, \
-	    l.out_w, l.out_h, l.out_c, \
-	    (int64_t)((int64_t)l.n * l.size*l.size*l.c/l.groups * l.out_h*l.out_w));
-    fprintf(stdout, "conv,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%llu\n", \
+    
+    FILE *fh = fopen("configuration.txt", "a");
+    /* fprintf(fh, "# conv  %5d %2d x%2d /%2d  %4d x%4d x%4d   ->  %4d x%4d x%4d  %12llu MACs\n", \ */
+    /* 	    n, size, size, stride, \ */
+    /* 	    w, h, c, \ */
+    /* 	    l.out_w, l.out_h, l.out_c, \ */
+    /* 	    (int64_t)((int64_t)l.n * l.size*l.size*l.c/l.groups * l.out_h*l.out_w)); */
+    fprintf(fh, "%d,conv,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%llu\n", \
+	    loepnummer, \
 	    n, size, size, groups, stride,			     \
 	    w, h, c, \
 	    l.out_w, l.out_h, l.out_c, \
 	    (int64_t)((int64_t)l.n * l.size*l.size*l.c/l.groups * l.out_h*l.out_w));
-
+    fclose(fh);
+    
     return l;
 }
 
@@ -328,24 +337,30 @@ void forward_convolutional_layer(convolutional_layer l, network net)
         net.input = l.binary_input;
     }
 
-    printf("x %d %d %d %d %d %d %d\n", l.h, l.w, l.c, l.groups, l.size, l.n, l.stride);
-    printf("y %d %d %d %d\n" , l.out_h, l.out_w, l.out_c, l.pad);
-    printf("z %d %d \n", l.workspace_size, l.out_h * l.out_w * l.out_c);
+    char buf[80];
+    snprintf(buf, sizeof(buf), "data_layer_%d.txt", l.loepnummer);
+    FILE *fh = fopen(buf, "w");
+    
+      
+    fprintf(fh, "x %d %d %d %d %d %d %d\n", l.h, l.w, l.c, l.groups, l.size, l.n, l.stride);
+    fprintf(fh, "y %d %d %d %d\n" , l.out_h, l.out_w, l.out_c, l.pad);
+    fprintf(fh, "z %d %d %d\n", l.workspace_size, l.out_h * l.out_w * l.out_c, l.batch_normalize);
+
     // weights
     for(i=0;i < l.nweights; i++) {
-        printf("%f ", l.weights[i]);
+      fprintf(fh, "%f ", l.weights[i]);
     }
-    printf("\n");
+    fprintf(fh, "\n");
     // biases
     for(i=0;i < l.nbiases; i++) {
-        printf("%f ", l.biases[i]);
+      fprintf(fh, "%f ", l.biases[i]);
     }
-    printf("\n");
+    fprintf(fh, "\n");
     // inputs
     for(i=0;i < l.h * l.w * l.c; i++) {
-        printf("%f ", net.input[i]);
+      fprintf(fh, "%f ", net.input[i]);
     }
-    printf("\n");
+    fprintf(fh, "\n");
     
     int m = l.n/l.groups;
     int k = l.size*l.size*l.c/l.groups;
@@ -369,9 +384,9 @@ void forward_convolutional_layer(convolutional_layer l, network net)
 
     // outputs
     for(i=0;i < l.out_h * l.out_w * l.out_c; i++) {
-        printf("%f ", l.output[i]);
+      fprintf(fh, "%f ", l.output[i]);
     }
-    printf("\n");
+    fprintf(fh, "\n");
 
     if(l.batch_normalize){
         forward_batchnorm_layer(l, net);
@@ -381,6 +396,9 @@ void forward_convolutional_layer(convolutional_layer l, network net)
 
     activate_array(l.output, l.outputs*l.batch, l.activation);
     if(l.binary || l.xnor) swap_binary(&l);
+
+    fclose(fh);
+
 }
 
 void backward_convolutional_layer(convolutional_layer l, network net)

@@ -739,8 +739,17 @@ int is_network(section *s)
             || strcmp(s->type, "[network]")==0);
 }
 
+
+int loepnummer = 0;
+
+
 network *parse_network_cfg(char *filename)
 {
+    FILE *fh = fopen("configuration.txt", "w");
+    fprintf(fh, "loepnummer,layer,n,sx,sy,groups,stride,wi,hi,ci,wo,ho,co,mac\n");
+    fclose(fh);
+    loepnummer = 0;
+
     list *sections = read_cfg(filename);
     node *n = sections->front;
     if(!n) error("Config file has no sections");
@@ -844,6 +853,7 @@ network *parse_network_cfg(char *filename)
         l.learning_rate_scale = option_find_float_quiet(options, "learning_rate", 1);
         l.smooth = option_find_float_quiet(options, "smooth", 0);
         option_unused(options);
+	l.loepnummer = loepnummer++;        
         net->layers[count] = l;
         if (l.workspace_size > workspace_size) workspace_size = l.workspace_size;
         free_section(s);

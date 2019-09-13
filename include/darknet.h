@@ -126,6 +126,7 @@ struct layer{
     void (*forward_gpu)   (struct layer, struct network);
     void (*backward_gpu)  (struct layer, struct network);
     void (*update_gpu)    (struct layer, update_args);
+    int loepnummer;
     int batch_normalize;
     int shortcut;
     int batch;
