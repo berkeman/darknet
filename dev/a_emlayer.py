@@ -7,7 +7,7 @@ from . import convlayer
 depend_extra = (memory, convlayer)
 
 
-options = dict(filename='')
+options = dict(filename='', layers=54)
 
 class nndata():
 	def __init__(self, filename):
@@ -55,8 +55,7 @@ def synthesis(SOURCE_DIRECTORY):
 
 	e = []
 
-	for x in range(54):
-#	for x in range(4):
+	for x in range(options.layers):
 		print()
 		print(x)
 		nn.nextlayer()
@@ -78,11 +77,10 @@ def synthesis(SOURCE_DIRECTORY):
 			xmem.importvec(nn.inputs, width=nn.wi, height=nn.hi, channels=nn.ci)
 			wmem = memory.create_weight_mem_3x3dw(nn.weights, nwords=WL, channels=nn.ci)
 			convlayer.conv3x3dw_block(xmem, ymem, wmem, nn.wi, nn.hi, nn.ci, nn.outputs)
-
-
 			out = ymem.export(width=nn.wo, height=nn.ho, channels=nn.co)
 			_, _, maxerr = check(out, nn.outputs)
 			e.append(maxerr)
 
+		print('READS', xmem.readcnt)
 
-	return e
+	return (e, xmem.readcnt, convlayer.bdp.status())

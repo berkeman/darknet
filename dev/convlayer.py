@@ -1,5 +1,22 @@
 from math import ceil
 
+class blockdotprod():
+	def __init__(self):
+		self.mulcnt = 0
+		self.cnt = 0
+		pass
+	def mac(self, xvec, kvec):
+		s = 0
+		for x, k in zip(xvec, kvec):
+			s += sum(xi * ki for xi, ki in zip(x, k))
+		self.mulcnt += sum(len(x) for x in xvec)
+		self.cnt += 1
+		return s
+	def status(self):
+		return(dict(mulcnt=self.mulcnt, cnt=self.cnt))
+
+bdp = blockdotprod()
+
 def conv1x1_block(xmem, ymem, wmem, width, height, channels_in, channels_out):
 	assert xmem.nwords == ymem.nwords == wmem.nwords
 	assert width * height * channels_in  // xmem.nwords <= xmem.naddr
@@ -29,11 +46,21 @@ def conv1x1_block(xmem, ymem, wmem, width, height, channels_in, channels_out):
 				for clow in range(WL):
 					cu = chigh*WL + clow # c is output channel
 					if cu < channels_out:
-						f = tuple(wmem.read(cu*inblocks + c) for c in range(inblocks))
-						t.append(blockdotprod(x, f))
+						f = tuple(wmem.read(cu*inblocks + c) for c in range(inblocks)) # fetch all coeff for one output channel
+						t.append(bdp.mac(x, f))
+#						t.append(blockdotprod(x, f))
 					else:
 						t.append(0)
 				ymem.write(w + h*width + chigh*width*height, t)
+
+
+
+class macbox_1x1():
+	def __init__(self, wordlen):
+		self.wordlen = wordlen
+	def mac(self, x, k, acc):
+		# acc += x*k
+		assert len(x) == len(k) == self.wordlen
 
 
 def conv3x3dw_block(xmem, ymem, wmem, width, height, channels, OUTPUTS):

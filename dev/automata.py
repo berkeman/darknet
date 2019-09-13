@@ -39,6 +39,9 @@ def main(urd):
 	jid = urd.build('reslayer_printall',    datasets=dict(source=jid))
 
 
-	jid = urd.build('emlayer',    options=dict(filename='loggg'))
+	jid = urd.build('emlayer',    options=dict(filename='loggg', layers=54))
 
-	print(max(blob.load(jobid=jid)))
+	ev, reads, bdp = blob.load(jobid=jid)
+	print('sum error', sum(abs(x) for x in ev))
+	print('num reads', reads)
+	print('bdp', bdp)
