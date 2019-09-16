@@ -41,7 +41,7 @@ def main(urd):
 	jid = urd.build('reslayer_printall',    datasets=dict(source=jid))
 
 
-	jid = urd.build('emlayer', jobids=dict(darknet=jid_darknet), options=dict(layers=54), datasets=dict(config=jid_type))
+	jid = urd.build('emlayer', jobids=dict(darknet=jid_darknet), options=dict(layers=64), datasets=dict(config=jid_type))
 
 	ev, reads, bdp = blob.load(jobid=jid)
 	print('sum error', sum(abs(x) for x in ev))
