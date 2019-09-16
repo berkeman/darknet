@@ -45,7 +45,7 @@ def conv1x1_block(xmem, ymem, wmem, width, height, channels_in, channels_out, bi
 	assert width * height * channels_in  // xmem.nwords <= xmem.naddr
 	assert width * height * channels_out // ymem.nwords <= ymem.naddr
 
-	print('conv1x1_block')
+	print('conv1x1_block %dx%d %d->%d' % (width, height, channels_in, channels_out))
 
 	WL = xmem.nwords
 
@@ -87,7 +87,7 @@ def conv3x3dw_block(xmem, ymem, wmem, width, height, channels, OUTPUTS):
 	assert width * height * channels // xmem.nwords <= xmem.naddr
 	assert width * height * channels // ymem.nwords <= ymem.naddr
 
-	print('conv3x3dw_block')
+	print('conv3x3dw_block %dx%d %d' % (width, height, channels))
 
 	K = 3
 	K2 = K//2
