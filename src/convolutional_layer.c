@@ -363,19 +363,20 @@ void forward_convolutional_layer(convolutional_layer l, network net)
     fprintf(fh, "\n");
 
     // normalisations
-    for(i=0;i < l.h * l.w * l.n; i++) {
-      fprintf(fh, "%f ", l.rolling_mean[i]);
+    if(l.batch_normalize) {
+	for(i=0;i < l.n; i++) {
+	  fprintf(fh, "%f ", l.rolling_mean[i]);
+	}
+	fprintf(fh, "\n");
+	for(i=0;i < l.n; i++) {
+	  fprintf(fh, "%f ", l.rolling_variance[i]);
+	}
+	fprintf(fh, "\n");
+	for(i=0;i < l.n; i++) {
+	  fprintf(fh, "%f ", l.scales[i]);
+	}
+	fprintf(fh, "\n");
     }
-    fprintf(fh, "\n");
-    for(i=0;i < l.h * l.w * l.n; i++) {
-      fprintf(fh, "%f ", l.rolling_variance[i]);
-    }
-    fprintf(fh, "\n");
-    for(i=0;i < l.h * l.w * l.n; i++) {
-      fprintf(fh, "%f ", l.scales[i]);
-    }
-    fprintf(fh, "\n");
-
 
 
     
