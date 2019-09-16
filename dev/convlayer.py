@@ -1,6 +1,13 @@
-from math import ceil
+from math import ceil, sqrt
 
-class blockdotprod():
+
+def blockdotprod(xv, fv):
+	s = 0
+	for x, f in zip(xv, fv):
+		s += sum(xi * fi for xi, fi in zip(x, f))
+	return s
+
+class Blockdotprod():
 	def __init__(self):
 		self.mulcnt = 0
 		self.cnt = 0
@@ -15,9 +22,25 @@ class blockdotprod():
 	def status(self):
 		return(dict(mulcnt=self.mulcnt, cnt=self.cnt))
 
-bdp = blockdotprod()
+class BiasNorm():
+	def __init__(self, layer):
+		self.mean = layer.rolling_mean
+		self.var  = layer.rolling_var
+		self.bias = layer.biases
+		self.scales = layer.scales
+	def bn(self, x, channel):
+		# Bias and (batch) normalisation
+		# x = input value
+		x = (x - self.mean[channel]) / sqrt(self.var[channel] + 1e-9)
+		x = x * self.scales[channel]
+		x = x + self.bias[channel]
+		return x
 
-def conv1x1_block(xmem, ymem, wmem, width, height, channels_in, channels_out):
+
+
+bdp = Blockdotprod()
+
+def conv1x1_block(xmem, ymem, wmem, width, height, channels_in, channels_out, bias):
 	assert xmem.nwords == ymem.nwords == wmem.nwords
 	assert width * height * channels_in  // xmem.nwords <= xmem.naddr
 	assert width * height * channels_out // ymem.nwords <= ymem.naddr
@@ -32,12 +55,6 @@ def conv1x1_block(xmem, ymem, wmem, width, height, channels_in, channels_out):
 	print('inblocks', inblocks)
 	print('utblocks', utblocks)
 
-	def blockdotprod(xv, fv):
-		s = 0
-		for x, f in zip(xv, fv):
-			s += sum(xi * fi for xi, fi in zip(x, f))
-		return s
-
 	for h in range(height):
 		for w in range(width):
 			x = tuple(xmem.read(w + h*width + c*width*height) for c in range(inblocks))  # fetch all input channels
@@ -47,7 +64,9 @@ def conv1x1_block(xmem, ymem, wmem, width, height, channels_in, channels_out):
 					cu = chigh*WL + clow # c is output channel
 					if cu < channels_out:
 						f = tuple(wmem.read(cu*inblocks + c) for c in range(inblocks)) # fetch all coeff for one output channel
-						t.append(bdp.mac(x, f))
+						y = bdp.mac(x, f)
+						y = bias.bn(y, cu)
+						t.append(y)
 #						t.append(blockdotprod(x, f))
 					else:
 						t.append(0)

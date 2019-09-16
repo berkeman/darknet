@@ -75,9 +75,10 @@ def synthesis(SOURCE_DIRECTORY):
 
 			xmem.importvec(nn.inputs, width=nn.wi, height=nn.hi, channels=nn.ci)
 			wmem = memory.create_weight_mem_1x1(nn.weights, nwords=WL, channels_in=nn.ci, channels_out=nn.co)
-			convlayer.conv1x1_block(xmem, ymem, wmem, width=nn.wi, height=nn.hi, channels_in=nn.ci, channels_out=nn.co)
+			bias = convlayer.BiasNorm(nn)
+			convlayer.conv1x1_block(xmem, ymem, wmem, width=nn.wi, height=nn.hi, channels_in=nn.ci, channels_out=nn.co, bias=bias)
 			out = ymem.export(width=nn.wo, height=nn.ho, channels=nn.co)
-			_, _, maxerr = check(out, nn.outputs)
+			_, _, maxerr = check(out, nn.outputs2)
 			e.append(maxerr)
 		elif nn.k == 3 and nn.groups == nn.ci == nn.co and nn.stride == 1:
 			print('3x3dw')
