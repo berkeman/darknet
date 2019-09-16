@@ -344,7 +344,7 @@ void forward_convolutional_layer(convolutional_layer l, network net)
       
     fprintf(fh, "x %d %d %d %d %d %d %d\n", l.h, l.w, l.c, l.groups, l.size, l.n, l.stride);
     fprintf(fh, "y %d %d %d %d\n" , l.out_h, l.out_w, l.out_c, l.pad);
-    fprintf(fh, "z %d %d %d\n", l.workspace_size, l.out_h * l.out_w * l.out_c, l.batch_normalize);
+    fprintf(fh, "z %d %d %d %d\n", l.workspace_size, l.out_h * l.out_w * l.out_c, l.batch_normalize, l.activation);
 
     // weights
     for(i=0;i < l.nweights; i++) {

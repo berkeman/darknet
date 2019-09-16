@@ -24,7 +24,8 @@ class Layer():
 		line = self.fh.readline().rstrip('\n').split(' ')
 		self.ho, self.wo, _, self.pad = map(int, line[1:])
 		line = self.fh.readline().rstrip('\n').split(' ')
-		_, _, self.bn = map(int, line[1:])
+		_, _, self.bn, self.activation = map(int, line[1:])
+		self.activation = {1:'relu', 3:'linear'}[self.activation]
 		def getdata():
 			x = self.fh.readline()
 			return tuple(map(float, x.rstrip().split(' ')))
