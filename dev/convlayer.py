@@ -1,12 +1,5 @@
 from math import ceil, sqrt
 
-
-def blockdotprod(xv, fv):
-	s = 0
-	for x, f in zip(xv, fv):
-		s += sum(xi * fi for xi, fi in zip(x, f))
-	return s
-
 class Blockdotprod():
 	def __init__(self):
 		self.mulcnt = 0
@@ -67,7 +60,6 @@ def conv1x1_block(xmem, ymem, wmem, width, height, channels_in, channels_out, bi
 						y = bdp.mac(x, f)
 						y = bias.bn(y, cu)
 						t.append(y)
-#						t.append(blockdotprod(x, f))
 					else:
 						t.append(0)
 				ymem.write(w + h*width + chigh*width*height, t)
