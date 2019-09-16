@@ -7,6 +7,7 @@ class Memory():
 		self.naddr = naddr
 		self.nwords = nwords
 		self.verbose = verbose
+		self.readcnt = 0
 		if self.verbose:
 			self.printsize()
 
@@ -18,6 +19,7 @@ class Memory():
 
 	def read(self, a):
 		assert 0 <= a <= self.naddr
+		self.readcnt += 1
 		return self.m[a]
 
 	def printsize(self):
