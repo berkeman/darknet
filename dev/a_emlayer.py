@@ -51,7 +51,7 @@ def check(xv, yv, thres=1e-5):
 		cnt += 1
 	print('checked', cnt)
 	print('errs   ', errs)
-	print('maxerr ', maxerr)
+	print('maxerr [42m', maxerr, '[0m')
 	return cnt, errs, maxerr
 
 
@@ -72,6 +72,7 @@ def synthesis(SOURCE_DIRECTORY):
 	for loepnummer in datasets.config.iterate(None, 'loepnummer'):
 		if loepnummer >= options.layers:
 			break
+		print()
 		print(loepnummer)
 		nn = Layer(resolve_jobid_filename(jobids.darknet, 'data_layer_%d.txt' % (loepnummer,)))
 		print('BN:', nn.bn)
