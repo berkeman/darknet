@@ -1,6 +1,8 @@
 from os.path import join
 from os import symlink
 
+depend_extra = ('../darknet',)
+
 import subprocess
 
 def synthesis(SOURCE_DIRECTORY):

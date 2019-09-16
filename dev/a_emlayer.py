@@ -25,7 +25,7 @@ class nndata():
 		line = self.fh.readline().rstrip('\n').split(' ')
 		self.ho, self.wo, _, self.pad = map(int, line[1:])
 		line = self.fh.readline().rstrip('\n').split(' ')
-
+		_, _, self.bn = map(int, line[1:])
 		def getdata():
 			x = self.fh.readline()
 			return tuple(map(float, x.rstrip().split(' ')))
@@ -33,7 +33,11 @@ class nndata():
 		self.weights = getdata()
 		self.biases  = getdata()
 		self.inputs  = getdata()
+		self.rolling_mean = getdata()
+		self.rolling_var = getdata()
+		self.scales = getdata()
 		self.outputs = getdata()
+		self.outputs2 = getdata()
 
 
 def check(xv, yv, thres=1e-5):
