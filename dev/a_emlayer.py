@@ -1,3 +1,4 @@
+from extras import resolve_jobid_filename
 from os.path import join
 from math import ceil
 
@@ -7,12 +8,16 @@ from . import convlayer
 depend_extra = (memory, convlayer)
 
 
-options = dict(filename='', layers=54)
+options = dict(layers=54)
+jobids  = ('darknet',) # directory with inputs/weights/outputs, one file per layer
+datasets= ('config',)  # dataset with network configuration
+
 
 class nndata():
 	def __init__(self, filename):
 		self.filename = filename
 		self.fh = open(filename, 'rt')
+		self.nextlayer()
 
 	def nextlayer(self):
 		line = self.fh.readline().rstrip('\n').split(' ')
@@ -29,6 +34,7 @@ class nndata():
 		self.biases  = getdata()
 		self.inputs  = getdata()
 		self.outputs = getdata()
+
 
 def check(xv, yv, thres=1e-5):
 	cnt = 0
@@ -47,7 +53,6 @@ def check(xv, yv, thres=1e-5):
 
 
 def synthesis(SOURCE_DIRECTORY):
-	nn = nndata(join(SOURCE_DIRECTORY, options.filename))
 
 	WL = 32
 	xmem = memory.Memory(224*224*3, WL)
@@ -55,10 +60,10 @@ def synthesis(SOURCE_DIRECTORY):
 
 	e = []
 
-	for x in range(options.layers):
-		print()
-		print(x)
-		nn.nextlayer()
+	for loepnummer in datasets.config.iterate(None, 'loepnummer'):
+		print(loepnummer)
+		nn = nndata(resolve_jobid_filename(jobids.darknet, 'data_layer_%d.txt' % (loepnummer,)))
+
 		if nn.k == 1 and nn.groups == 1:
 			print('1x1')
 			print(nn.wi, nn.hi, nn.ci, '->', nn.wo, nn.ho, nn.co)

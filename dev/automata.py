@@ -41,9 +41,16 @@ def main(urd):
 	jid = urd.build('reslayer_printall',    datasets=dict(source=jid))
 
 
-	jid = urd.build('emlayer',    options=dict(filename='loggg', layers=54))
+	jid = urd.build('emlayer', jobids=dict(darknet=jid_darknet), options=dict(layers=54), datasets=dict(config=jid_type))
 
 	ev, reads, bdp = blob.load(jobid=jid)
 	print('sum error', sum(abs(x) for x in ev))
+	print('max error', max(abs(x) for x in ev))
 	print('num reads', reads)
 	print('bdp', bdp)
+
+
+
+
+# @@@ kör darknet via metod
+# @@@ se till att resten läser all data från denna.
