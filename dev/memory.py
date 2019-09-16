@@ -10,6 +10,7 @@ class Memory():
 		self.readcnt = 0
 		if self.verbose:
 			self.printsize()
+		self.readhistory = []
 
 	def write(self, a, d):
 		assert len(d) == self.nwords
@@ -17,9 +18,11 @@ class Memory():
 		self.m[a] = d
 #		print('write %5d' % (a,), ''.join("% 5.2f" % x for x in d))
 
-	def read(self, a):
+	def read(self, a, silent=False):
 		assert 0 <= a <= self.naddr
 		self.readcnt += 1
+		if not silent:
+			self.readhistory.append(a)
 		return self.m[a]
 
 	def printsize(self):
@@ -60,7 +63,7 @@ def vec2mem(mem, data, width, height, channels):
 				goladr = x + y * width + c * width * height
 				futadr = x + y * width + (c // mem.nwords) * width * height
 				golden = data[goladr]
-				fut = mem.read(futadr)[c % mem.nwords]
+				fut = mem.read(futadr, silent=True)[c % mem.nwords]
 				assert fut == golden
 
 
@@ -69,7 +72,7 @@ def mem2vec(mem, width, height, channels):
 	for x in range(width):
 		for y in range(height):
 			for c in range(channels):
-				data = mem.read(x + y * width + (c // mem.nwords) * width * height)
+				data = mem.read(x + y * width + (c // mem.nwords) * width * height, silent=True)
 				out[x + y * width + c * width * height] = data[c % mem.nwords]
 	return out
 
