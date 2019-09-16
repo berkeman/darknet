@@ -18,18 +18,19 @@ class Blockdotprod():
 class BiasNorm():
 	def __init__(self, layer):
 		self.mean = layer.rolling_mean
-		self.var  = layer.rolling_var
+		self.var  = tuple(abs(x) for x in layer.rolling_var) # var may be negative from darknet!
 		self.bias = layer.biases
 		self.scales = layer.scales
 	def bn(self, x, channel):
 		# Bias and (batch) normalisation
 		# x = input value
+		if channel >= len(self.bias):
+			# @@@ NB: Emulating word alignment, pad with zeros
+			return 0
 		x = (x - self.mean[channel]) / sqrt(self.var[channel] + 1e-9)
 		x = x * self.scales[channel]
 		x = x + self.bias[channel]
 		return x
-
-
 
 bdp = Blockdotprod()
 
@@ -74,7 +75,7 @@ class macbox_1x1():
 		assert len(x) == len(k) == self.wordlen
 
 
-def conv3x3dw_block(xmem, ymem, wmem, width, height, channels, OUTPUTS):
+def conv3x3dw_block(xmem, ymem, wmem, width, height, channels, bias):
 	assert xmem.nwords == ymem.nwords == wmem.nwords
 	assert width * height * channels // xmem.nwords <= xmem.naddr
 	assert width * height * channels // ymem.nwords <= ymem.naddr
@@ -104,4 +105,5 @@ def conv3x3dw_block(xmem, ymem, wmem, width, height, channels, OUTPUTS):
 							data = xmem.read(srcadr)
 						weight = wmem.read(wadr)
 						acc = [ta + tw * tx for ta, tw, tx in zip(acc, weight, data)]
+				acc = tuple(bias.bn(x, chigh * WL + ix) for ix, x in enumerate(acc))
 				ymem.write(w + h * width + chigh * width * height, acc)

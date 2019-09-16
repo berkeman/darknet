@@ -31,12 +31,13 @@ class Layer():
 		self.weights = getdata()
 		self.biases  = getdata()
 		self.inputs  = getdata()
-		self.rolling_mean = getdata()
-		self.rolling_var = getdata()
-		self.scales = getdata()
+		if self.bn:
+			self.rolling_mean = getdata()
+			self.rolling_var = getdata()
+			self.scales = getdata()
 		self.outputs = getdata()
 		self.outputs2 = getdata()
-
+		self.outputs = [] # kill this to ensure that normalisation and bias is active!
 
 def check(xv, yv, thres=1e-5):
 	cnt = 0
@@ -88,9 +89,10 @@ def synthesis(SOURCE_DIRECTORY):
 			print('3x3dw')
 			xmem.importvec(nn.inputs, width=nn.wi, height=nn.hi, channels=nn.ci)
 			wmem = memory.create_weight_mem_3x3dw(nn.weights, nwords=WL, channels=nn.ci)
-			convlayer.conv3x3dw_block(xmem, ymem, wmem, nn.wi, nn.hi, nn.ci, nn.outputs)
+			bias = convlayer.BiasNorm(nn)
+			convlayer.conv3x3dw_block(xmem, ymem, wmem, nn.wi, nn.hi, nn.ci, bias)
 			out = ymem.export(width=nn.wo, height=nn.ho, channels=nn.co)
-			_, _, maxerr = check(out, nn.outputs)
+			_, _, maxerr = check(out, nn.outputs2)
 			e.append(maxerr)
 
 		print('READS', xmem.readcnt)
