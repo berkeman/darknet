@@ -1,12 +1,13 @@
+from extras import resolve_jobid_filename
 import blob
 
 def main(urd):
 
-#./darknet classifier predict cfg/imagenet1k.data mobilenet/test.cfg  mobilenet/test.weights mobilenet/cat.jpg | head -54 > kalle
+	jid_darknet = urd.build('darknet')
 
 	jid = urd.build('csvimport',
 		options=dict(
-			filename='mobilenetv2_formatted_conf.txt',
+			filename=resolve_jobid_filename(jid_darknet, 'configuration.txt'),
 			separator=',',
 			labelsonfirstline=True,
 			allow_bad=False,
@@ -16,6 +17,7 @@ def main(urd):
 		datasets=dict(source=jid),
 		options=dict(
 			column2type=dict(
+				loepnummer='number',
 				layer='unicode:UTF-8',
 				n='number',
 				sx='number',
