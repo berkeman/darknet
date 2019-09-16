@@ -1,6 +1,6 @@
+from dataset import DatasetWriter
+
 from extras import resolve_jobid_filename
-from os.path import join
-from math import ceil
 
 from . import memory
 from . import convlayer
@@ -13,12 +13,11 @@ jobids  = ('darknet',) # directory with inputs/weights/outputs, one file per lay
 datasets= ('config',)  # dataset with network configuration
 
 
-class nndata():
+class Layer():
 	def __init__(self, filename):
 		self.filename = filename
 		self.fh = open(filename, 'rt')
 		self.nextlayer()
-
 	def nextlayer(self):
 		line = self.fh.readline().rstrip('\n').split(' ')
 		self.hi, self.wi, self.ci, self.groups, self.k, self.co, self.stride = map(int, line[1:])
@@ -29,7 +28,6 @@ class nndata():
 		def getdata():
 			x = self.fh.readline()
 			return tuple(map(float, x.rstrip().split(' ')))
-
 		self.weights = getdata()
 		self.biases  = getdata()
 		self.inputs  = getdata()
@@ -58,6 +56,12 @@ def check(xv, yv, thres=1e-5):
 
 def synthesis(SOURCE_DIRECTORY):
 
+	dw = DatasetWriter()
+	dw.add('lopenummer', 'number')
+	dw.add('maxerror', 'float64')
+	dw.add('readhistx', 'json')
+	dw.set_slice(0)
+
 	WL = 32
 	xmem = memory.Memory(224*224*3, WL)
 	ymem = memory.Memory(112*112*5, WL)
@@ -65,14 +69,14 @@ def synthesis(SOURCE_DIRECTORY):
 	e = []
 
 	for loepnummer in datasets.config.iterate(None, 'loepnummer'):
+		if loepnummer >= options.layers:
+			break
 		print(loepnummer)
-		nn = nndata(resolve_jobid_filename(jobids.darknet, 'data_layer_%d.txt' % (loepnummer,)))
-
+		nn = Layer(resolve_jobid_filename(jobids.darknet, 'data_layer_%d.txt' % (loepnummer,)))
+		print('BN:', nn.bn)
+		maxerr = None # scope
 		if nn.k == 1 and nn.groups == 1:
 			print('1x1')
-			print(nn.wi, nn.hi, nn.ci, '->', nn.wo, nn.ho, nn.co)
-			print(nn.k, nn.groups, nn.stride, nn.pad)
-
 			xmem.importvec(nn.inputs, width=nn.wi, height=nn.hi, channels=nn.ci)
 			wmem = memory.create_weight_mem_1x1(nn.weights, nwords=WL, channels_in=nn.ci, channels_out=nn.co)
 			bias = convlayer.BiasNorm(nn)
@@ -82,8 +86,6 @@ def synthesis(SOURCE_DIRECTORY):
 			e.append(maxerr)
 		elif nn.k == 3 and nn.groups == nn.ci == nn.co and nn.stride == 1:
 			print('3x3dw')
-			print(nn.wi, nn.hi, nn.ci, '->', nn.wo, nn.ho, nn.co)
-			print(nn.k, nn.groups, nn.stride, nn.pad)
 			xmem.importvec(nn.inputs, width=nn.wi, height=nn.hi, channels=nn.ci)
 			wmem = memory.create_weight_mem_3x3dw(nn.weights, nwords=WL, channels=nn.ci)
 			convlayer.conv3x3dw_block(xmem, ymem, wmem, nn.wi, nn.hi, nn.ci, nn.outputs)
@@ -92,5 +94,6 @@ def synthesis(SOURCE_DIRECTORY):
 			e.append(maxerr)
 
 		print('READS', xmem.readcnt)
-
+		dw.write(loepnummer, maxerr, xmem.readhistory)
+		xmem.readhistory = []
 	return (e, xmem.readcnt, convlayer.bdp.status())
