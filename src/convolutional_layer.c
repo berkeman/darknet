@@ -348,32 +348,32 @@ void forward_convolutional_layer(convolutional_layer l, network net)
 
     // weights
     for(i=0;i < l.nweights; i++) {
-      fprintf(fh, "%f ", l.weights[i]);
+      fprintf(fh, "%e ", l.weights[i]);
     }
     fprintf(fh, "\n");
     // biases
     for(i=0;i < l.nbiases; i++) {
-      fprintf(fh, "%f ", l.biases[i]);
+      fprintf(fh, "%e ", l.biases[i]);
     }
     fprintf(fh, "\n");
     // inputs
     for(i=0;i < l.h * l.w * l.c; i++) {
-      fprintf(fh, "%f ", net.input[i]);
+      fprintf(fh, "%e ", net.input[i]);
     }
     fprintf(fh, "\n");
 
     // normalisations
     if(l.batch_normalize) {
 	for(i=0;i < l.n; i++) {
-	  fprintf(fh, "%f ", l.rolling_mean[i]);
+	  fprintf(fh, "%e ", l.rolling_mean[i]);
 	}
 	fprintf(fh, "\n");
 	for(i=0;i < l.n; i++) {
-	  fprintf(fh, "%f ", l.rolling_variance[i]);
+	  fprintf(fh, "%e ", l.rolling_variance[i]);
 	}
 	fprintf(fh, "\n");
 	for(i=0;i < l.n; i++) {
-	  fprintf(fh, "%f ", l.scales[i]);
+	  fprintf(fh, "%e ", l.scales[i]);
 	}
 	fprintf(fh, "\n");
     }
@@ -402,7 +402,7 @@ void forward_convolutional_layer(convolutional_layer l, network net)
 
     // outputs
     for(i=0;i < l.out_h * l.out_w * l.out_c; i++) {
-      fprintf(fh, "%f ", l.output[i]);
+      fprintf(fh, "%e ", l.output[i]);
     }
     fprintf(fh, "\n");
 
@@ -414,7 +414,7 @@ void forward_convolutional_layer(convolutional_layer l, network net)
 
     // outputs with bias and normalisation
     for(i=0;i < l.out_h * l.out_w * l.out_c; i++) {
-      fprintf(fh, "%f ", l.output[i]);
+      fprintf(fh, "%e ", l.output[i]);
     }
     fprintf(fh, "\n");
 
@@ -422,6 +422,13 @@ void forward_convolutional_layer(convolutional_layer l, network net)
     activate_array(l.output, l.outputs*l.batch, l.activation);
     if(l.binary || l.xnor) swap_binary(&l);
 
+    // outputs with activation
+    for(i=0;i < l.out_h * l.out_w * l.out_c; i++) {
+      fprintf(fh, "%e ", l.output[i]);
+    }
+    fprintf(fh, "\n");
+
+    
     fclose(fh);
 
 }
