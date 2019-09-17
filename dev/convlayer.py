@@ -1,4 +1,4 @@
-from math import ceil, sqrt
+from math import ceil, sqrt, nan
 
 class Blockdotprod():
 	def __init__(self):
@@ -18,19 +18,35 @@ class Blockdotprod():
 class BiasNorm():
 	def __init__(self, layer):
 		self.mean = layer.rolling_mean
-		self.var  = tuple(abs(x) for x in layer.rolling_var) # var may be negative from darknet!
+		self.var  = layer.rolling_var # var may be negative from Darknet!
 		self.bias = layer.biases
 		self.scales = layer.scales
+		self.activation = layer.activation
+		self.batchnorm = layer.bn
 	def bn(self, x, channel):
 		# Bias and (batch) normalisation
 		# x = input value
 		if channel >= len(self.bias):
 			# @@@ NB: Emulating word alignment, pad with zeros
 			return 0
-		x = (x - self.mean[channel]) / sqrt(self.var[channel] + 1e-9)
-		x = x * self.scales[channel]
-		x = x + self.bias[channel]
-		return x
+		if self.batchnorm:
+			if self.var[channel] < 0:
+				# This is what happens inside Darknet,
+				# we do the same thing to keep our results
+				# as close as possible to Darknet.
+				x = nan
+			else:
+				x = (x - self.mean[channel]) / (sqrt(self.var[channel]) + .000001) # eps from blas.c
+			x = x * self.scales[channel]
+			x = x + self.bias[channel]
+		else:
+			x = + self.bias[channel]
+
+		if self.activation == 'relu':
+			return max(0, x)
+		else:
+			assert self.activation == 'linear'
+			return x
 
 bdp = Blockdotprod()
 
