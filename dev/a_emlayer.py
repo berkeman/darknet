@@ -1,3 +1,5 @@
+from math import log10
+
 from dataset import DatasetWriter
 
 from extras import resolve_jobid_filename
@@ -46,15 +48,18 @@ def check(xv, yv, thres=1e-5):
 	cnt = 0
 	errs = 0
 	maxerr = 0
+	perr = 0
+	ptot = 0
 	for ix, (x, y) in enumerate(zip(xv, yv)):
 		e = abs(x - y)
+		perr += e*e
+		ptot += x*x
 		if e > thres:
 			errs += 1
 		maxerr = max(maxerr, e)
 		cnt += 1
-	print('checked', cnt)
-	print('errs   ', errs)
-	print('maxerr [42m', maxerr, '[0m')
+	print('checked %9d  errs %9d  maxerr [42m%0.12f[0m  snr(dB) %4.2f' % (
+		cnt, errs, maxerr, -10*log10(perr/ptot)))
 	return cnt, errs, maxerr
 
 
@@ -78,11 +83,9 @@ def synthesis(SOURCE_DIRECTORY):
 		print()
 		print(loepnummer)
 		nn = Layer(resolve_jobid_filename(jobids.darknet, 'data_layer_%d.txt' % (loepnummer,)))
-		print('BN:', nn.bn)
-		print('AC:', nn.activation)
+		print('BN=%d, activation=%s' % (nn.bn, nn.activation))
 		maxerr = None # scope
 		if nn.k == 1 and nn.groups == 1:
-			print('1x1')
 			xmem.importvec(nn.inputs, width=nn.wi, height=nn.hi, channels=nn.ci)
 			wmem = memory.create_weight_mem_1x1(nn.weights, nwords=WL, channels_in=nn.ci, channels_out=nn.co)
 			bias = convlayer.BiasNorm(nn)
@@ -91,7 +94,6 @@ def synthesis(SOURCE_DIRECTORY):
 			_, _, maxerr = check(out, nn.outputs3)
 			e.append(maxerr)
 		elif nn.k == 3 and nn.groups == nn.ci == nn.co and nn.stride == 1:
-			print('3x3dw')
 			xmem.importvec(nn.inputs, width=nn.wi, height=nn.hi, channels=nn.ci)
 			wmem = memory.create_weight_mem_3x3dw(nn.weights, nwords=WL, channels=nn.ci)
 			bias = convlayer.BiasNorm(nn)

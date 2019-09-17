@@ -2,7 +2,8 @@ from math import ceil
 
 class Memory():
 	def __init__(self, naddr, nwords, verbose=False):
-		print('[Memory create: %d x %d]' % (naddr, nwords,))
+		if verbose:
+			print('[Memory create: %d x %d]' % (naddr, nwords,))
 		self.m = [[0 for x in range(nwords)] for y in range(naddr)]
 		self.naddr = naddr
 		self.nwords = nwords

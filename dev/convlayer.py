@@ -62,8 +62,8 @@ def conv1x1_block(xmem, ymem, wmem, width, height, channels_in, channels_out, bi
 	inblocks = ceil(channels_in/WL)
 	utblocks = ceil(channels_out/WL)
 
-	print('  inblocks', inblocks)
-	print('  utblocks', utblocks)
+#	print('  inblocks', inblocks)
+#	print('  utblocks', utblocks)
 
 	for h in range(height):
 		for w in range(width):
@@ -105,7 +105,7 @@ def conv3x3dw_block(xmem, ymem, wmem, width, height, channels, bias):
 
 	chanblocks = ceil(channels / WL)
 
-	print('  chanblocks', chanblocks)
+#	print('  chanblocks', chanblocks)
 
 	for h in range(height):
 		for w in range(width):
