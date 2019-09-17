@@ -36,9 +36,11 @@ class Layer():
 			self.rolling_mean = getdata()
 			self.rolling_var = getdata()
 			self.scales = getdata()
-		self.outputs = getdata()
-		self.outputs2 = getdata()
-		self.outputs = [] # kill this to ensure that normalisation and bias is active!
+		self.outputs = getdata()   # scalar prod output
+		self.outputs2 = getdata()  # with norm + bias
+		self.outputs3 = getdata()  # with activations
+		self.outputs = [0 for x in range(len(self.outputs))] # kill this to ensure that normalisation and bias is active!
+		self.outputs2 = [0 for x in range(len(self.outputs))] # kill this to ensure that normalisation and bias is active!
 
 def check(xv, yv, thres=1e-5):
 	cnt = 0
@@ -77,6 +79,7 @@ def synthesis(SOURCE_DIRECTORY):
 		print(loepnummer)
 		nn = Layer(resolve_jobid_filename(jobids.darknet, 'data_layer_%d.txt' % (loepnummer,)))
 		print('BN:', nn.bn)
+		print('AC:', nn.activation)
 		maxerr = None # scope
 		if nn.k == 1 and nn.groups == 1:
 			print('1x1')
@@ -85,7 +88,7 @@ def synthesis(SOURCE_DIRECTORY):
 			bias = convlayer.BiasNorm(nn)
 			convlayer.conv1x1_block(xmem, ymem, wmem, width=nn.wi, height=nn.hi, channels_in=nn.ci, channels_out=nn.co, bias=bias)
 			out = ymem.export(width=nn.wo, height=nn.ho, channels=nn.co)
-			_, _, maxerr = check(out, nn.outputs2)
+			_, _, maxerr = check(out, nn.outputs3)
 			e.append(maxerr)
 		elif nn.k == 3 and nn.groups == nn.ci == nn.co and nn.stride == 1:
 			print('3x3dw')
@@ -94,7 +97,8 @@ def synthesis(SOURCE_DIRECTORY):
 			bias = convlayer.BiasNorm(nn)
 			convlayer.conv3x3dw_block(xmem, ymem, wmem, nn.wi, nn.hi, nn.ci, bias)
 			out = ymem.export(width=nn.wo, height=nn.ho, channels=nn.co)
-			_, _, maxerr = check(out, nn.outputs2)
+			_, _, maxerr = check(out, nn.outputs3)
+
 			e.append(maxerr)
 
 		print('READS', xmem.readcnt)
