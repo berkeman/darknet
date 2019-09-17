@@ -50,7 +50,7 @@ def check(xv, yv, thres=1e-5):
 		e = abs(x - y)
 		if e > thres:
 			errs += 1
-			maxerr = max(maxerr, e)
+		maxerr = max(maxerr, e)
 		cnt += 1
 	print('checked', cnt)
 	print('errs   ', errs)
