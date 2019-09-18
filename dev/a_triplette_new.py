@@ -8,7 +8,7 @@ from . import memory
 from . import convlayer_classes as convlayer
 from . import cache
 
-depend_extra = (memory, convlayer, darknetlayer)
+depend_extra = (memory, convlayer, darknetlayer, cache)
 
 jobids  = ('darknet',) # directory with inputs/weights/outputs, one file per layer
 datasets= ('config',)  # dataset with network configuration
