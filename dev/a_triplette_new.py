@@ -31,9 +31,10 @@ def check(xv, yv, thres=1e-5):
 			errs += 1
 		maxerr = max(maxerr, e)
 		cnt += 1
+	snr = -10*log10(perr/ptot)
 	print('checked %9d  errs %9d  maxerr [42m%0.12f[0m  snr(dB) %4.2f' % (
-		cnt, errs, maxerr, -10*log10(perr/ptot)))
-	return cnt, errs, maxerr
+		cnt, errs, maxerr, snr))
+	return cnt, errs, maxerr, snr
 
 
 
@@ -56,6 +57,7 @@ def synthesis():
 
 
 #####################################################
+	res = []
 
 	for n, data in sorted(triplettes.items()):
 		print('\n\n')
@@ -140,9 +142,11 @@ def synthesis():
 		# output data
 		out = ymem.export(width=l2.wo, height=l2.ho, channels=l2.co)
 
-		check(out, l2.outputs3)
+		_, _, maxerr, snr = check(out, l2.outputs3)
 
 		print(cache01.reads, cache01.hits, cache01.miss)
 		print(cache12.reads, cache12.hits, cache12.miss)
 
+		res.append((n, maxerr, snr, (cache01.reads, cache01.hits, cache01.miss), (cache12.reads, cache12.hits, cache12.miss)))
 
+	return res

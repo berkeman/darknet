@@ -54,6 +54,9 @@ def main(urd):
 	jid = urd.build('triplette', jobids=dict(darknet=jid_darknet), datasets=dict(config=jid_type))
 
 	jid = urd.build('triplette_new', jobids=dict(darknet=jid_darknet), datasets=dict(config=jid_type))
+	res = blob.load(jobid=jid)
+	for item in res:
+		print(item)
 
 
 # @@@ kör darknet via metod
