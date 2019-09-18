@@ -54,17 +54,10 @@ def conv1x1_block(xmem, ymem, wmem, width, height, channels_in, channels_out, bi
 	assert xmem.nwords == ymem.nwords == wmem.nwords
 	assert width * height * channels_in  // xmem.nwords <= xmem.naddr
 	assert width * height * channels_out // ymem.nwords <= ymem.naddr
-
 	print('conv1x1_block %dx%d %d->%d' % (width, height, channels_in, channels_out))
-
 	WL = xmem.nwords
-
 	inblocks = ceil(channels_in/WL)
 	utblocks = ceil(channels_out/WL)
-
-#	print('  inblocks', inblocks)
-#	print('  utblocks', utblocks)
-
 	for h in range(height):
 		for w in range(width):
 			x = tuple(xmem.read(w + h*width + c*width*height) for c in range(inblocks))  # fetch all input channels
@@ -95,18 +88,11 @@ def conv3x3dw_block(xmem, ymem, wmem, width, height, channels, bias):
 	assert xmem.nwords == ymem.nwords == wmem.nwords
 	assert width * height * channels // xmem.nwords <= xmem.naddr
 	assert width * height * channels // ymem.nwords <= ymem.naddr
-
 	print('conv3x3dw_block %dx%d %d' % (width, height, channels))
-
 	K = 3
 	K2 = K//2
-
 	WL = xmem.nwords
-
 	chanblocks = ceil(channels / WL)
-
-#	print('  chanblocks', chanblocks)
-
 	for h in range(height):
 		for w in range(width):
 			for chigh in range(chanblocks):
