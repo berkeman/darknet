@@ -6,12 +6,14 @@ from extras import resolve_jobid_filename
 from . import darknetlayer
 from . import memory
 from . import convlayer_classes as convlayer
+from . import cache
 
 depend_extra = (memory, convlayer, darknetlayer)
 
 jobids  = ('darknet',) # directory with inputs/weights/outputs, one file per layer
 datasets= ('config',)  # dataset with network configuration
 
+options = dict(cache12size=100000, cache01size=100000)
 
 
 
@@ -89,39 +91,58 @@ def synthesis():
 		def xreadfun0(a):
 			return xmem.read(a)
 		layer0 = convlayer.Conv1x1_block(xreadfun0, wmem0, l0.wi, l0.hi, l0.ci, l0.co, bias0, WL)
-		for h in range(l0.hi):
-			for w in range(l0.wi):
-				data = layer0.conv(w, h)
-				for ix, block in enumerate(data):
-					ymem.write(w + h*l0.wi + ix * l0.wi * l0.hi, block)
 
+		cache01 = cache.StupidCache(options.cache01size)
 
 		# middle layer
-		xmem, ymem = ymem, xmem
 		def xreadfun1(a):
-			return xmem.read(a)
-		layer1 = convlayer.Conv3x3dw_block(xreadfun1, wmem1, l1.wi, l1.hi, l1.ci, bias1, WL)
-		for h in range(l1.hi):
-			for w in range(l1.wi):
-				data = layer1.conv(w, h)
+			try:
+				d = cache01.read(a)
+				return d
+			except cache.CacheMissException:
+				w = a%l1.wi
+				h = a//l1.wi
+				assert a < l1.wi * l1.hi, (a, w, h, a //(l1.wi*l1.hi))
+				data = layer0.conv(w, h)
 				for ix, block in enumerate(data):
-					ymem.write(w + h*l1.wi + ix * l1.wi * l1.hi, block)
+					cache01.write(w + h*l1.wi + ix * l1.wi * l1.hi, block)
+				d = data[a//(l1.wi*l1.hi)]
+				return d
+		layer1 = convlayer.Conv3x3dw_block(xreadfun1, wmem1, l1.wi, l1.hi, l1.ci, bias1, WL)
 
+		cache12 = cache.StupidCache(options.cache12size)
 
 		# last layer
-		xmem, ymem = ymem, xmem
 		def xreadfun2(a):
-			return xmem.read(a)
+			# För att skapa data på address a måste hela kolumnen skapas.
+			# Vi vet att första accessen till en ny kolumn sker till första lagret
+			#  Look in cache first
+			try:
+				d = cache12.read(a)
+				return d
+			except cache.CacheMissException:
+				w = a%l1.wi
+				h = a//l1.wi
+				assert a < l2.wi * l2.hi, (a, w, h, a //(l1.wi*l1.hi))
+				data = layer1.conv(w, h)
+				for ix, block in enumerate(data):
+					cache12.write(w + h*l1.wi + ix * l1.wi * l1.hi, block)
+				d = data[a//(l1.wi*l1.hi)]
+				return d
 		layer2 = convlayer.Conv1x1_block(xreadfun2, wmem2, l2.wi, l2.hi, l2.ci, l2.co, bias2, WL)
+
 		for h in range(l0.hi):
 			for w in range(l0.wi):
 				data = layer2.conv(w, h)
 				for ix, block in enumerate(data):
 					ymem.write(w + h*l0.wi + ix * l0.wi * l0.hi, block)
 
-
 		# output data
 		out = ymem.export(width=l2.wo, height=l2.ho, channels=l2.co)
 
 		check(out, l2.outputs3)
+
+		print(cache01.reads, cache01.hits, cache01.miss)
+		print(cache12.reads, cache12.hits, cache12.miss)
+
 
