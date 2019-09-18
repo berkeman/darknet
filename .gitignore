@@ -30,3 +30,7 @@ pelle*
 dev/*~
 *~
 src/#*
+
+libdarknet.a
+libdarknet.so
+
