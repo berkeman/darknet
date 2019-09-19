@@ -1,7 +1,7 @@
 from collections import namedtuple
 from math import log10, ceil
 
-from extras import resolve_jobid_filename
+from extras import resolve_jobid_filename, DotDict
 
 from . import darknetlayer
 from . import memory
@@ -13,7 +13,12 @@ depend_extra = (memory, convlayer, darknetlayer, cache)
 jobids  = ('darknet',) # directory with inputs/weights/outputs, one file per layer
 datasets= ('config',)  # dataset with network configuration
 
-options = dict(cache0size=1, cache01size=1, cache12size=1)
+options = dict(
+	xmemsize=224*224*3,
+	cache0size=1,
+	cache01size=1,
+	cache12size=1,
+)
 
 
 
@@ -38,10 +43,10 @@ def check(xv, yv, thres=1e-5):
 
 
 
-def synthesis():
+def prepare(params):
 	columns = ('ci','sx','co','wo','layer','wi','n','mac','stride','loepnummer','hi','ho','groups','sy')
 	config = namedtuple('config', columns)
-	v = tuple(x for x in map(lambda x: config(*x), datasets.config.iterate(None, columns)))
+	v = tuple(x for x in map(lambda x: config(*x), datasets.config.iterate("roundrobin", columns)))
 
 	print('Bottlenet combos, not counting stride==2 ones:')
 	n = 0
@@ -54,12 +59,24 @@ def synthesis():
 			triplettes[n] = (d2,d1,d0)
 			n += 1
 
+	res = [{} for x in range(params.slices)]
+	for ix, (key, val) in enumerate(triplettes.items()):
+		res[ix % params.slices][key] = val
+	return res
 
 
-#####################################################
+
+def analysis(sliceno, prepare_res):
+	triplettes = prepare_res[sliceno]
+	print(sliceno, len(triplettes))
+
 	res = []
 
 	for n, data in sorted(triplettes.items()):
+#		if n != 0:
+#			print('skip', n)
+#			continue
+
 		print('\n\n')
 		print('%2d  ' %(n,) + str(data[0]))
 		print('%2d  ' %(n,) + str(data[1]))
@@ -71,7 +88,8 @@ def synthesis():
 		l2 = darknetlayer.Layer(resolve_jobid_filename(jobids.darknet, 'data_layer_%d.txt' % (data[2].loepnummer,)))
 
 		WL = 32
-		xmem = memory.Memory(224*224*3, WL)
+
+		xmem = memory.Memory(options.xmemsize, WL)
 		ymem = memory.Memory(112*112*5, WL)
 
 		wmem0 = memory.create_weight_mem_1x1(l0.weights, nwords=WL, channels_in=l0.ci, channels_out=l0.co)
@@ -80,8 +98,6 @@ def synthesis():
 		bias1 = convlayer.BiasNorm(l1)
 		wmem2 = memory.create_weight_mem_1x1(l2.weights, nwords=WL, channels_in=l2.ci, channels_out=l2.co)
 		bias2 = convlayer.BiasNorm(l2)
-
-		print('GurGel')
 
 		# input data
 		xmem.importvec(l0.inputs, width=l0.wi, height=l0.hi, channels=l0.ci)
@@ -118,14 +134,27 @@ def synthesis():
 
 		_, _, maxerr, snr = check(out, l2.outputs3)
 
-		print(cache01.m.reads, cache01.m.hits, cache01.m.miss)
-		print(cache12.m.reads, cache12.m.hits, cache12.m.miss)
+		res.append(
+			DotDict(
+				n=n,
+				maxerr=maxerr,
+				snr=snr,
+				c0 = DotDict(reads=cache0.m.reads,  hits=cache0.m.hits,  miss=cache0.m.miss),
+				c1 = DotDict(reads=cache01.m.reads, hits=cache01.m.hits, miss=cache01.m.miss),
+				c2 = DotDict(reads=cache12.m.reads, hits=cache12.m.hits, miss=cache12.m.miss),
+				c0size = options.cache0size,
+				c1size = options.cache01size,
+				c2size = options.cache12size,
+				xsize = options.xmemsize,
+				xrcnt = xmem.readcnt,
+			)
+		)
+	return res
 
-		res.append((n, maxerr, snr, \
-			(cache0.m.reads,  cache0.m.hits,  cache0.m.miss), \
-			(cache01.m.reads, cache01.m.hits, cache01.m.miss), \
-			(cache12.m.reads, cache12.m.hits, cache12.m.miss), \
-			xmem.readcnt,
-		))
 
+
+def synthesis(analysis_res):
+	res = []
+	for item in analysis_res:
+		res.extend(item)
 	return res
