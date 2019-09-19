@@ -17,5 +17,5 @@ def synthesis(SOURCE_DIRECTORY):
 
 	print( command )
 
-	subprocess.run(command.split())
+	subprocess.check_call(command.split())
 
