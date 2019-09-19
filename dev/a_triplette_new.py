@@ -96,39 +96,13 @@ def synthesis():
 			return xmem.read(a)
 		layer0 = convlayer.Conv1x1_block(xreadfun0, wmem0, l0.wi, l0.hi, l0.ci, l0.co, bias0, WL)
 
-		cache01 = cache.StupidCache(options.cache01size)
+		cache01 = cache.FuncCache(l1.wi, l1.hi, options.cache01size, stride=1, func=layer0.conv)
 
-		# middle layer
-		def xreadfun1(coord):
-			try:
-				d = cache01.read(coord)
-				return d
-			except cache.CacheMissException:
-				w, h, c = coord
-				data = layer0.conv(w, h)
-				for ix, block in enumerate(data):
-					cache01.write((w, h, ix), block)
-				d = data[c]
-				return d
-		layer1 = convlayer.Conv3x3dw_block(xreadfun1, wmem1, l1.wi, l1.hi, l1.ci, bias1, WL)
+		layer1 = convlayer.Conv3x3dw_block(cache01.read, wmem1, l1.wi, l1.hi, l1.ci, bias1, WL)
 
-		cache12 = cache.StupidCache(options.cache12size)
+		cache12 = cache.FuncCache(l1.wi, l1.hi, options.cache12size, stride=1, func=layer1.conv)
 
-		# last layer
-		def xreadfun2(coord):
-			# För att skapa data på address a måste hela kolumnen skapas.
-			# Vi vet att första accessen till en ny kolumn sker till första lagret
-			try:
-				d = cache12.read(coord)
-				return d
-			except cache.CacheMissException:
-				w, h, c = coord
-				data = layer1.conv(w, h)
-				for ix, block in enumerate(data):
-					cache12.write((w, h, ix), block)
-				d = data[c]
-				return d
-		layer2 = convlayer.Conv1x1_block(xreadfun2, wmem2, l2.wi, l2.hi, l2.ci, l2.co, bias2, WL)
+		layer2 = convlayer.Conv1x1_block(cache12.read, wmem2, l2.wi, l2.hi, l2.ci, l2.co, bias2, WL)
 
 		for h in range(l2.hi):
 			for w in range(l2.wi):
@@ -141,9 +115,9 @@ def synthesis():
 
 		_, _, maxerr, snr = check(out, l2.outputs3)
 
-		print(cache01.reads, cache01.hits, cache01.miss)
-		print(cache12.reads, cache12.hits, cache12.miss)
+		print(cache01.m.reads, cache01.m.hits, cache01.m.miss)
+		print(cache12.m.reads, cache12.m.hits, cache12.m.miss)
 
-		res.append((n, maxerr, snr, (cache01.reads, cache01.hits, cache01.miss), (cache12.reads, cache12.hits, cache12.miss)))
+		res.append((n, maxerr, snr, (cache01.m.reads, cache01.m.hits, cache01.m.miss), (cache12.m.reads, cache12.m.hits, cache12.m.miss)))
 
 	return res

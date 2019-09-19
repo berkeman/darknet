@@ -1,7 +1,7 @@
 class CacheMissException(Exception):
 	pass
 
-class StupidCache():
+class LRUCache():
 	def __init__(self, size):
 		print('StupidCache', size)
 		self.m = {}
@@ -37,3 +37,30 @@ class StupidCache():
 		else:
 			self.hits += 1
 			return self.m[a][0]
+
+
+class FuncCache():
+	def __init__(self, outwidth, outheight, size, stride, func):
+		assert stride == 1
+		self.width = outwidth
+		self.height = outheight
+		self.m = LRUCache(size)
+		self.func = func
+	def read(self, coord):
+		"""
+		Return data from previous layer at position "coord".
+		If data is not in cache, generate it from "func".
+		All channels are populated after a call to "func".
+		"""
+		assert isinstance(coord, tuple) and len(coord) == 3  # (w, h, c)
+		try:
+			d = self.m.read(coord)
+			return d
+		except CacheMissException:
+			# compute output using prevlayer and add to cache
+			w, h, c = coord
+			data = self.func(w, h)
+			d = data[c]
+			for ix, block in enumerate(data):
+				self.m.write((w, h, ix), block)
+			return d
