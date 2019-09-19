@@ -13,7 +13,7 @@ depend_extra = (memory, convlayer, darknetlayer, cache)
 jobids  = ('darknet',) # directory with inputs/weights/outputs, one file per layer
 datasets= ('config',)  # dataset with network configuration
 
-options = dict(cache12size=100000, cache01size=100000, cache0size=100000)
+options = dict(cache0size=1, cache01size=1, cache12size=1)
 
 
 
@@ -85,7 +85,7 @@ def synthesis():
 
 		# input data
 		xmem.importvec(l0.inputs, width=l0.wi, height=l0.hi, channels=l0.ci)
-
+		xmem.readcnt = 0
 
 		# input
 		def xmemread(w, h):
@@ -121,6 +121,11 @@ def synthesis():
 		print(cache01.m.reads, cache01.m.hits, cache01.m.miss)
 		print(cache12.m.reads, cache12.m.hits, cache12.m.miss)
 
-		res.append((n, maxerr, snr, (cache01.m.reads, cache01.m.hits, cache01.m.miss), (cache12.m.reads, cache12.m.hits, cache12.m.miss)))
+		res.append((n, maxerr, snr, \
+			(cache0.m.reads,  cache0.m.hits,  cache0.m.miss), \
+			(cache01.m.reads, cache01.m.hits, cache01.m.miss), \
+			(cache12.m.reads, cache12.m.hits, cache12.m.miss), \
+			xmem.readcnt,
+		))
 
 	return res

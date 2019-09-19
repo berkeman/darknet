@@ -51,13 +51,17 @@ def main(urd):
 
 
 
+
 	jid = urd.build('triplette', jobids=dict(darknet=jid_darknet), datasets=dict(config=jid_type))
 
 	jid = urd.build('triplette_new', jobids=dict(darknet=jid_darknet), datasets=dict(config=jid_type))
 	res = blob.load(jobid=jid)
-	print("\n n  maxerr    SNR        01 RD  01HIT  01MIS     12 RD  12HIT  12MIS")
+
+	print()
+	print("                        ------   --------------------    --------------------    --------------------")
+	print(" n  maxerr    SNR         X RD     0 RD   0HIT   0MIS     01 RD  01HIT  01MIS     12 RD  12HIT  12MIS")
 	for item in res:
-		print("%2d  %f  %5.2f    %6d %6d %6d    %6d %6d %6d" % (item[0], item[1], item[2], item[3][0], item[3][1], item[3][2], item[4][0], item[4][1], item[4][2], ))
+		print("%2d  %f  %5.2f    %6d   %6d %6d %6d    %6d %6d %6d    %6d %6d %6d" % (item[0], item[1], item[2], item[6], item[3][0], item[3][1], item[3][2], item[4][0], item[4][1], item[4][2], item[5][0], item[5][1], item[5][2], ))
 	print("\n")
 
 # @@@ varför funkar inte sista softmaxlagret?  Verkar inte som att all data sparas i convlayer*.c
