@@ -103,8 +103,8 @@ def synthesis():
 				return d
 			except cache.CacheMissException:
 				w = a%l1.wi
-				h = a//l1.wi
-				assert a < l1.wi * l1.hi, (a, w, h, a //(l1.wi*l1.hi))
+				h = (a % (l1.wi*l1.hi)) // l1.wi
+#				assert a < l1.wi * l1.hi, (a, w, h, a //(l1.wi*l1.hi))
 				data = layer0.conv(w, h)
 				for ix, block in enumerate(data):
 					cache01.write(w + h*l1.wi + ix * l1.wi * l1.hi, block)
@@ -118,14 +118,13 @@ def synthesis():
 		def xreadfun2(a):
 			# För att skapa data på address a måste hela kolumnen skapas.
 			# Vi vet att första accessen till en ny kolumn sker till första lagret
-			#  Look in cache first
 			try:
 				d = cache12.read(a)
 				return d
 			except cache.CacheMissException:
 				w = a%l1.wi
-				h = a//l1.wi
-				assert a < l2.wi * l2.hi, (a, w, h, a //(l1.wi*l1.hi))
+				h = (a % (l1.wi*l1.hi)) // l1.wi
+#				assert a < l2.wi * l2.hi, (a, w, h, a //(l1.wi*l1.hi))
 				data = layer1.conv(w, h)
 				for ix, block in enumerate(data):
 					cache12.write(w + h*l1.wi + ix * l1.wi * l1.hi, block)
