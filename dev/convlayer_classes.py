@@ -67,7 +67,7 @@ class Conv1x1_block():
 		""" get full 1x1 convolution output at spatial coords (w, h) """
 		res = []
 		# fetch all input channels/blocks at once
-		x = tuple(self.xreadfun(w + h*self.width + c*self.width*self.height) for c in range(self.inblocks))
+		x = tuple(self.xreadfun((w, h, c)) for c in range(self.inblocks))
 		for chigh in range(self.utblocks):
 			t = []
 			for clow in range(self.WL):
@@ -164,7 +164,7 @@ class Conv3x3dw_block():
 					if x + w < 0 or x + w >= self.width or y + h < 0 or y + h >= self.height:
 						data = [0 for _ in range(self.WL)]
 					else:
-						data = self.xreadfun(srcadr)
+						data = self.xreadfun((w+x, h+y, chigh))
 					weight = self.wmem.read(wadr)
 					acc = [ta + tw * tx for ta, tw, tx in zip(acc, weight, data)]
 			acc = tuple(self.bias.bn(x, chigh * self.WL + ix) for ix, x in enumerate(acc))

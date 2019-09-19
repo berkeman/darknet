@@ -90,50 +90,48 @@ def synthesis():
 
 
 		# first layer
-		def xreadfun0(a):
+		def xreadfun0(coord):
+			w, h, c = coord
+			a = w + (h * l0.wi) + (c * l0.wi * l0.hi)
 			return xmem.read(a)
 		layer0 = convlayer.Conv1x1_block(xreadfun0, wmem0, l0.wi, l0.hi, l0.ci, l0.co, bias0, WL)
 
 		cache01 = cache.StupidCache(options.cache01size)
 
 		# middle layer
-		def xreadfun1(a):
+		def xreadfun1(coord):
 			try:
-				d = cache01.read(a)
+				d = cache01.read(coord)
 				return d
 			except cache.CacheMissException:
-				w = a%l1.wi
-				h = (a % (l1.wi*l1.hi)) // l1.wi
-#				assert a < l1.wi * l1.hi, (a, w, h, a //(l1.wi*l1.hi))
+				w, h, c = coord
 				data = layer0.conv(w, h)
 				for ix, block in enumerate(data):
-					cache01.write(w + h*l1.wi + ix * l1.wi * l1.hi, block)
-				d = data[a//(l1.wi*l1.hi)]
+					cache01.write((w, h, ix), block)
+				d = data[c]
 				return d
 		layer1 = convlayer.Conv3x3dw_block(xreadfun1, wmem1, l1.wi, l1.hi, l1.ci, bias1, WL)
 
 		cache12 = cache.StupidCache(options.cache12size)
 
 		# last layer
-		def xreadfun2(a):
+		def xreadfun2(coord):
 			# För att skapa data på address a måste hela kolumnen skapas.
 			# Vi vet att första accessen till en ny kolumn sker till första lagret
 			try:
-				d = cache12.read(a)
+				d = cache12.read(coord)
 				return d
 			except cache.CacheMissException:
-				w = a%l1.wi
-				h = (a % (l1.wi*l1.hi)) // l1.wi
-#				assert a < l2.wi * l2.hi, (a, w, h, a //(l1.wi*l1.hi))
+				w, h, c = coord
 				data = layer1.conv(w, h)
 				for ix, block in enumerate(data):
-					cache12.write(w + h*l1.wi + ix * l1.wi * l1.hi, block)
-				d = data[a//(l1.wi*l1.hi)]
+					cache12.write((w, h, ix), block)
+				d = data[c]
 				return d
 		layer2 = convlayer.Conv1x1_block(xreadfun2, wmem2, l2.wi, l2.hi, l2.ci, l2.co, bias2, WL)
 
-		for h in range(l0.hi):
-			for w in range(l0.wi):
+		for h in range(l2.hi):
+			for w in range(l2.wi):
 				data = layer2.conv(w, h)
 				for ix, block in enumerate(data):
 					ymem.write(w + h*l0.wi + ix * l0.wi * l0.hi, block)

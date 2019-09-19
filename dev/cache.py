@@ -12,7 +12,7 @@ class StupidCache():
 		self.reads = 0
 
 	def write(self, a, d):
-		assert isinstance(a, int)
+#		assert isinstance(a, int)
 		if len(self.m) == self.size:
 			# is full
 			if a in self.m:
