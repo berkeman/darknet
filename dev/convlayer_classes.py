@@ -83,64 +83,6 @@ class Conv1x1_block():
 			res.append(t)
 		return res
 
-
-
-
-
-def conv1x1_block(xmem, ymem, wmem, width, height, channels_in, channels_out, bias):
-	assert xmem.nwords == ymem.nwords == wmem.nwords
-	assert width * height * channels_in  // xmem.nwords <= xmem.naddr
-	assert width * height * channels_out // ymem.nwords <= ymem.naddr
-	print('conv1x1_block %dx%d %d->%d' % (width, height, channels_in, channels_out))
-	WL = xmem.nwords
-	inblocks = ceil(channels_in/WL)
-	utblocks = ceil(channels_out/WL)
-	for h in range(height):
-		for w in range(width):
-			x = tuple(xmem.read(w + h*width + c*width*height) for c in range(inblocks))  # fetch all input channels
-			for chigh in range(utblocks):
-				t = []
-				for clow in range(WL):
-					cu = chigh*WL + clow # c is output channel
-					if cu < channels_out:
-						f = tuple(wmem.read(cu*inblocks + c) for c in range(inblocks)) # fetch all coeff for one output channel
-						y = bdp.mac(x, f)
-						y = bias.bn(y, cu)
-						t.append(y)
-					else:
-						t.append(0)
-				ymem.write(w + h*width + chigh*width*height, t)
-
-
-
-
-
-def conv3x3dw_block(xmem, ymem, wmem, width, height, channels, bias):
-	assert xmem.nwords == ymem.nwords == wmem.nwords
-	assert width * height * channels // xmem.nwords <= xmem.naddr
-	assert width * height * channels // ymem.nwords <= ymem.naddr
-	print('conv3x3dw_block %dx%d %d' % (width, height, channels))
-	K = 3
-	K2 = K//2
-	WL = xmem.nwords
-	chanblocks = ceil(channels / WL)
-	for h in range(height):
-		for w in range(width):
-			for chigh in range(chanblocks):
-				acc = [0 for _ in range(WL)]
-				for y in range(-K2, K2+1):
-					for x in range(-K2, K2+1):
-						srcadr = (w + x) + (h + y) * width + chigh * width * height
-						wadr = (x+K2) + (y+K2) * K + chigh * K * K
-						if x + w < 0 or x + w >= width or y + h < 0 or y + h >= height:
-							data = [0 for _ in range(WL)]
-						else:
-							data = xmem.read(srcadr)
-						weight = wmem.read(wadr)
-						acc = [ta + tw * tx for ta, tw, tx in zip(acc, weight, data)]
-				acc = tuple(bias.bn(x, chigh * WL + ix) for ix, x in enumerate(acc))
-				ymem.write(w + h * width + chigh * width * height, acc)
-
 class Conv3x3dw_block():
 	def __init__(self, xreadfun, wmem, width, height, channels, bias, WL=32):
 		self.xreadfun = xreadfun
