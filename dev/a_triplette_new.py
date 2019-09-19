@@ -96,11 +96,11 @@ def synthesis():
 			return xmem.read(a)
 		layer0 = convlayer.Conv1x1_block(xreadfun0, wmem0, l0.wi, l0.hi, l0.ci, l0.co, bias0, WL)
 
-		cache01 = cache.FuncCache(l1.wi, l1.hi, options.cache01size, stride=1, func=layer0.conv)
+		cache01 = cache.FuncCache(options.cache01size, stride=1, func=layer0.conv)
 
 		layer1 = convlayer.Conv3x3dw_block(cache01.read, wmem1, l1.wi, l1.hi, l1.ci, bias1, WL)
 
-		cache12 = cache.FuncCache(l1.wi, l1.hi, options.cache12size, stride=1, func=layer1.conv)
+		cache12 = cache.FuncCache(options.cache12size, stride=1, func=layer1.conv)
 
 		layer2 = convlayer.Conv1x1_block(cache12.read, wmem2, l2.wi, l2.hi, l2.ci, l2.co, bias2, WL)
 
