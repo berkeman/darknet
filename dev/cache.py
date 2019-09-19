@@ -3,7 +3,7 @@ class CacheMissException(Exception):
 
 class LRUCache():
 	def __init__(self, size):
-		print('StupidCache', size)
+#		print('StupidCache', size)
 		self.m = {}
 		self.size = size
 		self.ts = 0
