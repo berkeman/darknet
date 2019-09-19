@@ -1,5 +1,5 @@
 from collections import namedtuple
-from math import log10
+from math import log10, ceil
 
 from extras import resolve_jobid_filename
 
@@ -13,7 +13,7 @@ depend_extra = (memory, convlayer, darknetlayer, cache)
 jobids  = ('darknet',) # directory with inputs/weights/outputs, one file per layer
 datasets= ('config',)  # dataset with network configuration
 
-options = dict(cache12size=100000, cache01size=100000)
+options = dict(cache12size=100000, cache01size=100000, cache0size=100000)
 
 
 
@@ -83,18 +83,22 @@ def synthesis():
 
 		print('GurGel')
 
-
-
 		# input data
 		xmem.importvec(l0.inputs, width=l0.wi, height=l0.hi, channels=l0.ci)
 
 
-		# first layer
-		def xreadfun0(coord):
-			w, h, c = coord
-			a = w + (h * l0.wi) + (c * l0.wi * l0.hi)
-			return xmem.read(a)
-		layer0 = convlayer.Conv1x1_block(xreadfun0, wmem0, l0.wi, l0.hi, l0.ci, l0.co, bias0, WL)
+		# input
+		def xmemread(w, h):
+			# return data for all channels at (w, h)
+			v = []
+			for c in range(ceil(l0.ci/WL)):
+				a = w + (h * l0.wi) + (c * l0.wi * l0.hi)
+				v.append(xmem.read(a))
+			return v
+
+		cache0 = cache.FuncCache(options.cache0size, stride=1, func=xmemread)
+
+		layer0 = convlayer.Conv1x1_block(cache0.read, wmem0, l0.wi, l0.hi, l0.ci, l0.co, bias0, WL)
 
 		cache01 = cache.FuncCache(options.cache01size, stride=1, func=layer0.conv)
 
@@ -104,13 +108,12 @@ def synthesis():
 
 		layer2 = convlayer.Conv1x1_block(cache12.read, wmem2, l2.wi, l2.hi, l2.ci, l2.co, bias2, WL)
 
+		# output
 		for h in range(l2.hi):
 			for w in range(l2.wi):
 				data = layer2.conv(w, h)
 				for ix, block in enumerate(data):
 					ymem.write(w + h*l0.wi + ix * l0.wi * l0.hi, block)
-
-		# output data
 		out = ymem.export(width=l2.wo, height=l2.ho, channels=l2.co)
 
 		_, _, maxerr, snr = check(out, l2.outputs3)
