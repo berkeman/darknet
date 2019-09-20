@@ -1,0 +1,97 @@
+* [2019-08-30 fre] komplexitet conv-1x1
+
+#cat mobilenetv2_configuration.txt | grep 'conv' | grep -v '^   64' | grep '1 x 1' | awk '{print $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19}' | grep -v 'MAC' | sort | uniq -c | awk '{print $1*$2*$4/62720, $1*$2*$4, $6, $12}' | awk '{printf("%5.2f %5d %5d %5d\n", $1, $2, $3, $4)}'
+
+|------+----------+----------+------|
+| #ops | #chan in | #chan ut |      |
+|------+----------+----------+------|
+| 0.20 |    12544 |       16 |   96 |
+| 0.20 |    12544 |       32 |   16 |
+| 0.20 |    12544 |       32 |   32 |
+| 0.10 |     6272 |       24 |  144 |
+| 0.05 |     3136 |       64 |  384 |
+| 0.05 |     3136 |      144 |   24 |
+| 0.05 |     3136 |       96 |   24 |
+| 0.04 |     2352 |       32 |  192 |
+| 0.04 |     2352 |      384 |   64 |
+| 0.03 |     1568 |      192 |   32 |
+| 0.01 |      392 |      576 |   96 |
+| 0.01 |      588 |       96 |  576 |
+| 0.01 |      784 |      144 |   32 |
+| 0.01 |      784 |      192 |   64 |
+| 0.00 |      196 |      384 |   96 |
+| 0.00 |      147 |      160 |  960 |
+| 0.00 |       49 |      320 | 1280 |
+| 0.00 |       49 |      576 |  160 |
+| 0.00 |       98 |      960 |  160 |
+| 0.00 |       49 |      960 |  320 |
+|------+----------+----------+------|
+
+total number of ops: 62720
+
+cat mobilenetv2_configuration.txt | grep '1 x 1' | grep MAC | awk '{print $(NF-1)}' | awk 'BEGIN{s=0}{s+=$1}END{print s}'
+390445056
+cat mobilenetv2_configuration.txt | grep MAC | awk '{print $(NF-1)}' | awk 'BEGIN{s=0}{s+=$1}END{print s}'
+429111936
+
+390/429 = 91%
+
+Så 91% av alla MACs är i 1x1-steget.  Per 1x1 är det 390M/62720 = 6225 MACs.  Detta motsvarar ungefär 80x80.
+
+
+* [2019-09-13 fre] batchnorm och strategi
+
+Batchnorm är fyra operationer som använder
+  - rolling_mean
+  - rolling_variance
+  - scales
+  - biases
+så dessa behöver kopieras in till pythonprogrammet och kod adderas
+
+Men det krånglar till saker och ting, jag vill hålla datavägen så
+clean som möjligt.  Alltså slå ihop bottleneck-operationerna, spara
+resultatet och använd som jämförelse senare.  Dvs
+
+  - [ ] plocka ut bottleneck-lagerna och spara dem på något sätt
+  - [ ] beräkna dem map första lagrets input.  spara denna tillsammans med föregående
+  - [ ] modda till blockbaserad beräkning
+
+Notera att man också måste ta med *additionen av residualen*.  Det
+blir att läsa denna ur någon spatialcache.  Ju snabbare man räknar
+desto mindre behöver denna cache vara, om man inte använder en som
+redan finns.
+
+Tror att det lönar sig att börja med att accelerera darknet-kopplingen!
+ - [ ] spara lager parametrar som egen fil
+ - [ ] sedan all data
+
+
+* [2019-09-20 fre]
+
+|     112 |     100 | 30 | 150528 |  25264628596 |
+|     224 |     100 | 30 | 150528 |  15036703700 |
+|     336 |     100 | 30 | 150528 |  10153927732 |
+|     448 |     100 | 30 | 150528 |  10216498324 |
+|     560 |     100 | 30 | 150528 |  10279068916 |
+|     112 |     150 | 30 | 150528 |  23384581576 |
+|     224 |     150 | 30 | 150528 |  15008296232 |
+|     336 |     150 | 30 | 150528 |  10093753480 |
+|     448 |     150 | 30 | 150528 |  10124557288 |
+|     560 |     150 | 30 | 150528 |  10155361096 |
+|     112 |     125 | 30 | 150528 |  23378065534 |
+|     224 |     125 | 30 | 150528 |  15008010302 |
+|     336 |     125 | 30 | 150528 |  10102106110 |
+|     448 |     125 | 30 | 150528 |  10141548478 |
+|     560 |     125 | 30 | 150528 |  10180990846 |
+|     112 |     200 | 30 | 150528 |  23408252764 |
+|     224 |     200 | 30 | 150528 |  15020512508 |
+|     336 |     200 | 30 | 150528 |  10094514844 |
+|     448 |     200 | 30 | 150528 |  10113863740 |
+|     560 |     200 | 30 | 150528 |  10133212636 |
+|     112 |     400 | 30 | 150528 |  13553896540 |
+|     224 |     400 | 30 | 150528 |  10187166124 |
+|     336 |     400 | 30 | 150528 |  10192262908 |
+|     448 |     400 | 30 | 150528 |  10197359692 |
+|     560 |     400 | 30 | 150528 |  10202456476 |
+| 1000000 | 1000000 | 30 | 150528 | 737064963756 |
+|         |         |    |        |              |
