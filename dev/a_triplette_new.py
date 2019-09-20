@@ -2,7 +2,7 @@ from collections import namedtuple
 from math import log10, ceil
 
 from extras import resolve_jobid_filename, DotDict
-
+from status import status
 from . import darknetlayer
 from . import memory
 from . import convlayer_classes as convlayer
@@ -73,7 +73,7 @@ def analysis(sliceno, prepare_res):
 	res = []
 
 	for n, data in sorted(triplettes.items()):
-#		if n != 0:
+#		if n != 8:
 #			print('skip', n)
 #			continue
 
@@ -125,11 +125,14 @@ def analysis(sliceno, prepare_res):
 		layer2 = convlayer.Conv1x1_block(cache12.read, wmem2, l2.wi, l2.hi, l2.ci, l2.co, bias2, WL)
 
 		# output
-		for h in range(l2.hi):
-			for w in range(l2.wi):
-				data = layer2.conv(w, h)
-				for ix, block in enumerate(data):
-					ymem.write(w + h*l0.wi + ix * l0.wi * l0.hi, block)
+		msg = "Calculating rows %%d/%d" % (l2.hi,)
+		with status(msg % (0,)) as update:
+			for h in range(l2.hi):
+				for w in range(l2.wi):
+					update((msg % (h,)) + " %d"%(w,))
+					data = layer2.conv(w, h)
+					for ix, block in enumerate(data):
+						ymem.write(w + h*l0.wi + ix * l0.wi * l0.hi, block)
 		out = ymem.export(width=l2.wo, height=l2.ho, channels=l2.co)
 
 		_, _, maxerr, snr = check(out, l2.outputs3)
