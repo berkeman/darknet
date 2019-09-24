@@ -135,6 +135,9 @@ def analysis(sliceno, prepare_res):
 				c2size = options.cache12size,
 				xsize = options.xmemsize,
 				xrcnt = xmem.readcnt,
+				cc0 = layer0.cc,
+				cc1 = layer1.cc,
+				cc2 = layer2.cc,
 			)
 		)
 	return res

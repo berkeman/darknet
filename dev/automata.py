@@ -109,12 +109,13 @@ def main(urd):
 		print(" n  maxerr    SNR         X RD     0 RD   0HIT   0MIS     01 RD  01HIT  01MIS     12 RD  12HIT  12MIS")
 		for t in sorted(res, key = lambda x: x['n']):
 			t.cost = t.xrcnt*xmemsize + t.c0.reads*c0size + t.c1.reads*c1size + t.c2.reads*c2size
-			print("%2d  %f  %5.2f    %6d   %6d %6d %6d    %6d %6d %6d    %6d %6d %6d   %20s" % (
+			print("%2d  %f  %5.2f    %6d   %6d %6d %6d    %6d %6d %6d    %6d %6d %6d  %9d %9d %9d %20s" % (
 				t.n, t.maxerr, t.snr,
 				t.xrcnt,
 				t.c0.reads, t.c0.hits, t.c0.miss,
 				t.c1.reads, t.c1.hits, t.c1.miss,
 				t.c2.reads, t.c2.hits, t.c2.miss,
+				t.cc0, t.cc1, t.cc2,
 				"{:,}".format(t.cost),
 			))
 		print("\n")

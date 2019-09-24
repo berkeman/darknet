@@ -11,7 +11,7 @@ class Blockdotprod():
 			s += sum(xi * ki for xi, ki in zip(x, k))
 		self.mulcnt += sum(len(x) for x in xvec)
 		self.cnt += 1
-		return s
+		return (len(xvec), s) #  (num_cc, result)
 	def status(self):
 		return(dict(mulcnt=self.mulcnt, cnt=self.cnt))
 
@@ -63,6 +63,7 @@ class Conv1x1_block():
 		self.WL = WL
 		self.inblocks = ceil(channels_in/WL)
 		self.utblocks = ceil(channels_out/WL)
+		self.cc = 0
 	def conv(self, w, h):
 		""" get full 1x1 convolution output at spatial coords (w, h) """
 		res = []
@@ -75,8 +76,9 @@ class Conv1x1_block():
 				if cu < self.channels_out:
 					# fetch all coeff for one output channel
 					f = tuple(self.wmem.read(cu*self.inblocks + c) for c in range(self.inblocks))
-					y = bdp.mac(x, f)
+					cc, y = bdp.mac(x, f)
 					y = self.bias.bn(y, cu)
+					self.cc += cc
 					t.append(y)
 				else:
 					t.append(0)
@@ -93,6 +95,7 @@ class Conv3x3dw_block():
 		self.channels = channels
 		self.WL = WL
 		self.chanblocks = ceil(channels/WL)
+		self.cc = 0
 	def conv(self, w, h):
 		K = 3
 		K2 = K//2
@@ -108,6 +111,7 @@ class Conv3x3dw_block():
 						data = self.xreadfun((w+x, h+y, chigh))
 					weight = self.wmem.read(wadr)
 					acc = [ta + tw * tx for ta, tw, tx in zip(acc, weight, data)]
+			self.cc += 1
 			acc = tuple(self.bias.bn(x, chigh * self.WL + ix) for ix, x in enumerate(acc))
 			res.append(acc)
 		return res
