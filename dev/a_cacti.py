@@ -56,6 +56,8 @@ def synthesis(SOURCE_DIRECTORY):
 	command = [join(SOURCE_DIRECTORY, "./cacti.5.3.rev.174/cacti")]
 	for arg in ARG_ORDER:
 		command.append(str(options.args.get(arg, DEFAULT_ARGS[arg])))
+	unknown_args = set(options.args) - set(DEFAULT_ARGS)
+	assert not unknown_args, "Unknown args: " + ", ".join(sorted(unknown_args))
 
 	subprocess.check_call(command)
 
