@@ -7,9 +7,9 @@ ifndef NTHREADS
 endif
 
 ifeq ($(TAG), dbg)
-  FLAGS = -m32 -ggdb -g -Wall -O0 -DNTHREADS=$(NTHREADS)
+  FLAGS = -ggdb -g -Wall -O0 -DNTHREADS=$(NTHREADS)
 else
-  FLAGS = -m32 -O3 -DNDEBUG  -DNTHREADS=$(NTHREADS)
+  FLAGS = -O3 -DNDEBUG  -DNTHREADS=$(NTHREADS)
 #  FLAGS = -O3 -DNDEBUG -msse2 -mfpmath=sse 
 endif
 
