@@ -101,7 +101,6 @@ class Conv3x3dw_block():
 			acc = [0 for _ in range(self.WL)]
 			for y in range(-K2, K2+1):
 				for x in range(-K2, K2+1):
-					srcadr = (w + x) + (h + y) * self.width + chigh * self.width * self.height
 					wadr = (x+K2) + (y+K2) * K + chigh * K * K
 					if x + w < 0 or x + w >= self.width or y + h < 0 or y + h >= self.height:
 						data = [0 for _ in range(self.WL)]
