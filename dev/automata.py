@@ -54,6 +54,10 @@ def main(urd):
 
 #	jid = urd.build('triplette', jobids=dict(darknet=jid_darknet), datasets=dict(config=jid_type))
 
+
+	jid_bottlenecks = urd.build('findtriplettes', datasets=dict(config=jid_type))
+
+
 	acost = []
 
 	for c0size, c1size, c2size in (
@@ -91,8 +95,7 @@ def main(urd):
 	):
 
 		jid = urd.build('triplette_new',
-			jobids=dict(darknet=jid_darknet),
-			datasets=dict(config=jid_type),
+			jobids=dict(darknet=jid_darknet, bottlenecks=jid_bottlenecks),
 			options=dict(cache0size=c0size, cache01size=c1size, cache12size=c2size)
 		)
 		res = blob.load(jobid=jid)
