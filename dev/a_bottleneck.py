@@ -21,6 +21,7 @@ options = dict(
 	cache01size=1,
 	cache12size=1,
 	WL = 32,
+	runonly=None,
 )
 
 
@@ -65,7 +66,7 @@ def analysis(sliceno, prepare_res):
 	res = []
 
 	for n, data in sorted(bottlenecks.items()):
-		if n != 8:
+		if options.runonly and n != options.runonly:
 			print('skip', n)
 			continue
 
