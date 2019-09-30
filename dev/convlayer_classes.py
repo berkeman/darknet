@@ -40,7 +40,7 @@ class BiasNorm():
 			x = x * self.scales[channel]
 			x = x + self.bias[channel]
 		else:
-			x = + self.bias[channel]
+			x = x + self.bias[channel]
 
 		if self.activation == 'relu':
 			return max(0, x)
