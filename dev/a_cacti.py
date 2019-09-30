@@ -61,6 +61,9 @@ def synthesis(SOURCE_DIRECTORY):
 
 	subprocess.check_call(command)
 
+	with open('command.txt', 'wt') as fh:
+		fh.write(' '.join(command) + '\n')
+
 	with open("out.csv") as fh:
 		keys = fh.readline().strip().split(", ")
 		values = fh.readline().strip().split(", ")
