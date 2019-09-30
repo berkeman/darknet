@@ -19,7 +19,7 @@ def window(v, N=3):
 			yield (n, buf)
 
 
-def synthesis():
+def analysis(sliceno):
 
 	dw = DatasetWriter(name='reslayers')
 	dw.add('wi', 'number')
@@ -33,7 +33,7 @@ def synthesis():
 	dw.set_slice(0)
 
 	v = []
-	for data in datasets.source.iterate(None, columns):
+	for data in datasets.source.iterate(sliceno, columns):
 		v.append(Layer(*data))
 
 
@@ -48,7 +48,6 @@ def synthesis():
 	dw = DatasetWriter(name='remlayers')
 	for key in columns:
 		dw.add(datasets.source.columns[key].name, datasets.source.columns[key].type)
-	dw.set_slice(0)
 
 	for n, x in enumerate(v):
 		if n in pops:
