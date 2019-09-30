@@ -62,7 +62,7 @@ def main(urd):
 		cost1 = cacti(c1size)
 		cost2 = cacti(c2size)
 
-		jid = urd.build('triplette_new',
+		jid = urd.build('bottleneck',
 			jobids=dict(darknet=jid_darknet, bottlenecks=jid_bottlenecks),
 			options=dict(xmemsize=m0size, cache0size=c0size, cache01size=c1size, cache12size=c2size)
 		)
