@@ -113,12 +113,12 @@ def analysis(sliceno, prepare_res):
 		# output
 		msg = "Calculating rows %%d/%d" % (l2.hi,)
 		with status(msg % (0,)) as update:
-			for h in range(l2.hi):
-				for w in range(l2.wi):
+			for h in range(l2.ho):
+				for w in range(l2.wo):
 					update((msg % (h,)) + " %d"%(w,))
 					data = layer2.conv(w, h)
 					for ix, block in enumerate(data):
-						ymem.write(w + h*l0.wi + ix * l0.wi * l0.hi, block)
+						ymem.write(w + h*l2.wo + ix * l2.wo * l2.ho, block)
 		out = ymem.export(width=l2.wo, height=l2.ho, channels=l2.co)
 
 		_, _, maxerr, snr = check(out, l2.outputs3)
