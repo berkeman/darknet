@@ -103,12 +103,12 @@ def analysis(sliceno, prepare_res):
 			return v
 
 		# bottleneck
-		cache0 = cache.FuncCache(options.cache0size, stride=1, func=xmemread)
-		layer0 = convlayer.Conv1x1_block(cache0.read, wmem0, l0.wi, l0.hi, l0.ci, l0.co, bias0, WL)
-		cache01 = cache.FuncCache(options.cache01size, stride=1, func=layer0.conv)
-		layer1 = convlayer.Conv3x3dw_block(cache01.read, wmem1, l1.wi, l1.hi, l1.ci, bias1, WL)
-		cache12 = cache.FuncCache(options.cache12size, stride=1, func=layer1.conv)
-		layer2 = convlayer.Conv1x1_block(cache12.read, wmem2, l2.wi, l2.hi, l2.ci, l2.co, bias2, WL)
+		cache0 = cache.FuncCache(options.cache0size, func=xmemread)
+		layer0 = convlayer.Conv1x1_block(cache0.read, wmem0, l0.wi, l0.hi, l0.ci, l0.co, bias0, WL, name='l0')
+		cache01 = cache.FuncCache(options.cache01size, func=layer0.conv)
+		layer1 = convlayer.Conv3x3dw_block(cache01.read, wmem1, l1.wi, l1.hi, l1.ci, l1.stride, bias1, WL, name='l1')
+		cache12 = cache.FuncCache(options.cache12size, func=layer1.conv)
+		layer2 = convlayer.Conv1x1_block(cache12.read, wmem2, l2.wi, l2.hi, l2.ci, l2.co, bias2, WL, name='l2')
 
 		# output
 		msg = "Calculating rows %%d/%d" % (l2.hi,)

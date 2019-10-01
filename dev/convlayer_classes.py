@@ -52,7 +52,8 @@ bdp = Blockdotprod()
 
 
 class Conv1x1_block():
-	def __init__(self, xreadfun, wmem, width, height, channels_in, channels_out, bias, WL):
+	def __init__(self, xreadfun, wmem, width, height, channels_in, channels_out, bias, WL, name=''):
+		self.name = name
 		self.xreadfun = xreadfun
 		self.wmem = wmem
 		self.bias = bias
@@ -86,7 +87,8 @@ class Conv1x1_block():
 		return res
 
 class Conv3x3dw_block():
-	def __init__(self, xreadfun, wmem, width, height, channels, bias, WL=32):
+	def __init__(self, xreadfun, wmem, width, height, channels, stride, bias, WL=32, name=''):
+		self.name = name
 		self.xreadfun = xreadfun
 		self.wmem = wmem
 		self.bias = bias

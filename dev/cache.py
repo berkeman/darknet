@@ -40,8 +40,7 @@ class LRUCache():
 
 
 class FuncCache():
-	def __init__(self, size, stride, func):
-		assert stride == 1
+	def __init__(self, size, func):
 		self.m = LRUCache(size)
 		self.func = func
 	def read(self, coord):
