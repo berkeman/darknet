@@ -43,15 +43,18 @@ def synthesis():
 
 	for loepnummer in (5,8,12,15,19,23,26,30,34,38,41,45,49,52,56,60):
 
+		l0 = darknetlayer.Layer(resolve_jobid_filename(jobids.darknet, 'data_layer_%d.txt' % (loepnummer-1,)))
 		l = darknetlayer.Layer(resolve_jobid_filename(jobids.darknet, 'data_layer_%d.txt' % (loepnummer,)))
 
 		xmem = memory.Memory(112*112*5, WL)
 		ymem = memory.Memory(112*112*5, WL)
 
+		wmem0 = memory.create_weight_mem_1x1(l0.weights, nwords=WL, channels_in=l0.ci, channels_out=l0.co)
+		bias0 = convlayer.BiasNorm(l0)
 		wmem1 = memory.create_weight_mem_3x3dw(l.weights, nwords=WL, channels=l.ci)
 		bias1 = convlayer.BiasNorm(l)
 
-		xmem.importvec(l.inputs, width=l.wi, height=l.hi, channels=l.ci)
+		xmem.importvec(l0.inputs, width=l0.wi, height=l0.hi, channels=l0.ci)
 		xmem.readcnt = 0
 
 		# input
@@ -64,7 +67,9 @@ def synthesis():
 			return v
 
 		cache0 = cache.FuncCache(1000000, func=xmemread)
-		layer = convlayer.Conv3x3dw_block(cache0.read, wmem1, l.wi, l.hi, l.ci, l.stride, bias1, WL, name='3x3dw')
+		layer0 = convlayer.Conv1x1_block(cache0.read, wmem0, l0.wi, l0.hi, l0.ci, l0.co, bias0, WL, name='l0')
+		cache01 = cache.FuncCache(1000000, func=layer0.conv)
+		layer = convlayer.Conv3x3dw_block(cache01.read, wmem1, l.wi, l.hi, l.ci, l.stride, bias1, WL, name='l1')
 
 		# output
 		for h in range(l.ho):
