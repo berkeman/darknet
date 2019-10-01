@@ -44,6 +44,9 @@ def main(urd):
 	jid_bottlenecks = urd.build('findtriplettes', datasets=dict(config=jid_type))
 
 
+	jid = urd.build('teststride', jobids=dict(darknet=jid_darknet))
+
+
 	acost = []
 
 	for c0size, c1size, c2size in (

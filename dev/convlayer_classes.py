@@ -96,10 +96,13 @@ class Conv3x3dw_block():
 		self.WL = WL
 		self.chanblocks = ceil(channels/WL)
 		self.cc = 0
+		self.stride = stride
 	def conv(self, w, h):
 		K = 3
 		K2 = K//2
 		res = []
+		w *= self.stride
+		h *= self.stride
 		for chigh in range(self.chanblocks):
 			acc = [0 for _ in range(self.WL)]
 			for y in range(-K2, K2+1):
