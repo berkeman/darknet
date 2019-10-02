@@ -49,7 +49,7 @@ def check(xv, yv, thres=1e-5):
 
 def prepare(params):
 	# load all bottlenecks and spread "evenly" to all slices
-	x = blob.load(jobid=jobids.bottlenecks)
+	x, _ = blob.load(jobid=jobids.bottlenecks)
 	res = [{} for x in range(params.slices)]
 	for ix, (key, val) in enumerate(x.items()):
 		res[ix % params.slices][key] = val
