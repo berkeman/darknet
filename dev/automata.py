@@ -72,7 +72,16 @@ def main(urd):
 		cost2 = c2size
 
 
-		jid_macs = urd.build('countmacs', jobids=dict(darknet=jid_darknet, bottlenecks=jid_bottlenecks))
+		jid_macs = urd.build('countmacs',
+			jobids=dict(bottlenecks=jid_bottlenecks),
+			datasets=dict(config=jid_type),
+		)
+		x = blob.load(jobid=jid_macs)
+		botmacs = sum(x[0].values())
+		skipmacs = sum(x[1].values())
+		print('MACs in bottleneck layers', botmacs)
+		print('MACs in skipped layers   ', skipmacs)
+		print('skipped ratio            ', skipmacs / (skipmacs + botmacs))
 
 
 		def colmag(f):
