@@ -69,7 +69,6 @@ def analysis(sliceno, prepare_res):
 			print('skip', n)
 			continue
 
-		print('\n\n')
 		print('%2d  ' %(n,) + str(data[0]))
 		print('%2d  ' %(n,) + str(data[1]))
 		print('%2d  ' %(n,) + str(data[2]))
