@@ -61,7 +61,6 @@ def analysis(sliceno, prepare_res):
 	WL = options.WL
 
 	bottlenecks = prepare_res[sliceno]
-	print(sliceno, len(bottlenecks))
 
 	res = []
 
