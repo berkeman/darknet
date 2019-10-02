@@ -5,7 +5,7 @@ import blob
 
 WL = 32
 m0size = 112*112*3
-
+system_freq = 1e9
 
 def main(urd):
 
@@ -50,11 +50,16 @@ def main(urd):
 
 	for c0size, c1size, c2size in (
 
-		(112*4,400,30),# (112*3,400,30), (112*2.5,400,30), (112*2,400,30), (112*1,400,30),
-		(112*4,300,30),# (112*3,300,30), (112*2.5,300,30), (112*2,300,30), (112*1,300,30),
+#		(112*4,400,30),# (112*3,400,30), (112*2.5,400,30), (112*2,400,30), (112*1,400,30),
+#		(112*4,300,30),# (112*3,300,30), (112*2.5,300,30), (112*2,300,30), (112*1,300,30),
 #		(112*4,200,30), (112*3,200,30), (112*2.5,200,30), (112*2,200,30), (112*1,200,30),
 
-		(m0size, m0size, m0size),
+#		(m0size, m0size, m0size),
+		(1e6, 1e6, 1e6),
+
+#		(1e6, m0size, m0size),
+#		(m0size, 1e6, m0size),
+#		(m0size, m0size, 1e6),
 	):
 
 		def cacti(size):
@@ -71,6 +76,8 @@ def main(urd):
 		cost1 = c1size
 		cost2 = c2size
 
+		MUL1 = 1
+		MUL3 = 1
 
 		jid_macs = urd.build('countmacs',
 			jobids=dict(bottlenecks=jid_bottlenecks),
@@ -103,10 +110,16 @@ def main(urd):
 		print()
 		print('=' * 80)
 		print('cache sizes', c0size, c1size, c2size)
+		print('#MULS = %4d  %4d  %4d' % (WL*MUL1, WL*MUL3, WL*MUL1))
 		print("                        ______   ____________________    ____________________    ____________________    _______________________       ________________     ________________")
 		print(" n  maxerr    SNR         X RD     0 RD   0HIT   0MIS     01 RD  01HIT  01MIS     12 RD  12HIT  12MIS     cc 1x1  cc 3x3  cc 1x1             tot energy     tot clock cycles")
+
 		for t in sorted(res, key = lambda x: x['n']):
 			t.energy = t.xrcnt*costm + t.c0.reads*cost0 + t.c1.reads*cost1 + t.c2.reads*cost2
+			t.l0stat['cc'] /= MUL1
+			t.l1stat['cc'] /= MUL3
+			t.l2stat['cc'] /= MUL1
+
 			t.cc = t.l0stat['cc'] + t.l1stat['cc'] + t.l2stat['cc']
 			print("%2d  %f  %5.2f    %6d   %6d %6d %6d    %6d %6d %6d    %6d %6d %6d    %7d %7d %7d   %20s %20s" % (
 				t.n, t.maxerr, t.snr,
@@ -120,13 +133,13 @@ def main(urd):
 			))
 
 			print("                        %6s                 %6s                  %6s                  %6s     %6s  %6s  %6s" % (
-				colmag(t.xrcnt / (t.l0stat['wi']*t.l0stat['hi']*t.l0stat['ci']/t.l0stat['WL'])),
+				colmag(t.xrcnt   / (t.l0stat['wi']*t.l0stat['hi']*t.l0stat['ci']/t.l0stat['WL'])),
 				colmag(t.c0.miss / (t.l0stat['wi']*t.l0stat['hi'])),
 				colmag(t.c1.miss / (t.l1stat['wi']*t.l1stat['hi'])),
 				colmag(t.c2.miss / (t.l2stat['wi']*t.l2stat['hi'])),
-				colmag(WL * t.l0stat['cc'] / (t.l0stat['wi']*t.l0stat['hi']*t.l0stat['ci']*t.l0stat['co'])),
-				colmag(3*3*WL * t.l1stat['cc'] / (t.l1stat['wo']*t.l1stat['ho']*t.l1stat['co']* 3 * 3)),
-				colmag(WL * t.l2stat['cc'] / (t.l2stat['wi']*t.l2stat['hi']*t.l2stat['ci']*t.l2stat['co'])),
+				colmag(MUL1 * WL * t.l0stat['cc'] / (t.l0stat['wi']*t.l0stat['hi']*t.l0stat['ci']*t.l0stat['co'])),
+				colmag(MUL3 * WL * t.l1stat['cc'] / (t.l1stat['wo']*t.l1stat['ho']*t.l1stat['co']* 3 * 3)),
+				colmag(MUL1 * WL * t.l2stat['cc'] / (t.l2stat['wi']*t.l2stat['hi']*t.l2stat['ci']*t.l2stat['co'])),
 			))
 
 			tot['cc'] += t.cc
@@ -138,11 +151,8 @@ def main(urd):
 		print("\n")
 		acost.append(res)
 
-
-
-
 	for item in acost:
-		print("%9d %9d %9d %9d    %12d %12d" % (item[0].xsize, item[0].c0size, item[0].c1size, item[0].c2size, sum(x.energy for x in item), sum(x.cc for x in item)))
+		print("%9d %9d %9d %9d    %12d %12d  %5.2ffps" % (item[0].xsize, item[0].c0size, item[0].c1size, item[0].c2size, sum(x.energy for x in item), sum(x.cc for x in item), system_freq/sum(x.cc for x in item)))
 
 	from automata_common import profile_jobs
 	print('Exec time', profile_jobs(urd.joblist))
