@@ -131,7 +131,7 @@ class Conv3x3dw_block():
 						data = self.xreadfun((w+x, h+y, chigh))
 					weight = self.wmem.read(wadr)
 					acc = [ta + tw * tx for ta, tw, tx in zip(acc, weight, data)]
-			self.cc += 1
+			self.cc += K * K
 			self.macs += K * K * self.WL
 			acc = tuple(self.bias.bn(x, chigh * self.WL + ix) for ix, x in enumerate(acc))
 			res.append(acc)
