@@ -51,7 +51,7 @@ def prepare(params):
 	# load all bottlenecks and spread "evenly" to all slices
 	x, _ = blob.load(jobid=jobids.bottlenecks)
 	res = [{} for x in range(params.slices)]
-	for ix, (key, val) in enumerate(x.items()):
+	for ix, (key, val) in enumerate(sorted(x.items())):
 		res[ix % params.slices][key] = val
 	return res
 
