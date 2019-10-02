@@ -136,9 +136,9 @@ def analysis(sliceno, prepare_res):
 				c2size = options.cache12size,
 				xsize = options.xmemsize,
 				xrcnt = xmem.readcnt,
-				cc0 = layer0.cc,
-				cc1 = layer1.cc,
-				cc2 = layer2.cc,
+				l0stat = layer0.status(),
+				l1stat = layer1.status(),
+				l2stat = layer2.status(),
 			)
 		)
 	return res

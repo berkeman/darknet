@@ -88,14 +88,14 @@ def main(urd):
 		print(" n  maxerr    SNR         X RD     0 RD   0HIT   0MIS     01 RD  01HIT  01MIS     12 RD  12HIT  12MIS     cc 1x1  cc 3x3  cc 1x1             tot energy     tot clock cycles")
 		for t in sorted(res, key = lambda x: x['n']):
 			t.energy = t.xrcnt*costm + t.c0.reads*cost0 + t.c1.reads*cost1 + t.c2.reads*cost2
-			t.cc = t.cc0 + t.cc1 + t.cc2
+			t.cc = t.l0stat['cc'] + t.l1stat['cc'] + t.l2stat['cc']
 			print("%2d  %f  %5.2f    %6d   %6d %6d %6d    %6d %6d %6d    %6d %6d %6d    %7d %7d %7d   %20s %20s" % (
 				t.n, t.maxerr, t.snr,
 				t.xrcnt,
 				t.c0.reads, t.c0.hits, t.c0.miss,
 				t.c1.reads, t.c1.hits, t.c1.miss,
 				t.c2.reads, t.c2.hits, t.c2.miss,
-				t.cc0, t.cc1, t.cc2,
+				t.l0stat['cc'], t.l1stat['cc'], t.l2stat['cc'],
 				"{:,}".format(t.energy),
 				"{:,}".format(t.cc),
 			))
