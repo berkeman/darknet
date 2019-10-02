@@ -95,3 +95,13 @@ Tror att det lönar sig att börja med att accelerera darknet-kopplingen!
 |     560 |     400 | 30 | 150528 |  10202456476 |
 | 1000000 | 1000000 | 30 | 150528 | 737064963756 |
 |         |         |    |        |              |
+
+* [2019-10-02 ons] Fakta och antaganden runt simuleringarna
+
+ - 1x1 kan parallelliseras från WL till WL*WL multar / cc
+ - 3x3 från WL till 9*WL multar / cc
+ - Om man summerar klockcykler per lager antar man HW reuse.
+ - Antag att cache-missar inte kostar klockcykler, vi har IDEAL PREFETCH.
+ - Antag energi / minnesaccess prop mot minnesstorlek (och kanske wordlength)
+ - Man kan få > 1.0 access / minne idealt om #channels % WL != 0.
+ - Att göra 9*WL multar parallellt i 3x3DW lönar sig knappt om inte 1x1 också går snabbt (32-fallet ger 6% gain)
