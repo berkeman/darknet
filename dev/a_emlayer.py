@@ -1,8 +1,8 @@
 from math import log10
 
-from dataset import DatasetWriter
+from accelerator.dataset import DatasetWriter
 
-from extras import resolve_jobid_filename
+from accelerator.extras import resolve_jobid_filename
 
 from . import darknetlayer
 from . import memory

@@ -1,4 +1,4 @@
-from dataset import Dataset
+from accelerator.dataset import Dataset
 
 datasets = ('source',)
 

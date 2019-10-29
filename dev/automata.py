@@ -1,7 +1,7 @@
 from collections import Counter
 
-from extras import resolve_jobid_filename
-import blob
+from accelerator.extras import resolve_jobid_filename
+from accelerator import blob
 
 bitsperword = 8
 WL = 32
@@ -193,5 +193,5 @@ def main(urd):
 		))
 	print("All memory sizes in *bits*")
 
-	from automata_common import profile_jobs
+	from accelerator.automata_common import profile_jobs
 	print('\nExec time', profile_jobs(urd.joblist))

@@ -1,4 +1,4 @@
-import blob
+from accelerator import blob
 
 jobids  = (
 	'bottlenecks',  # job with pickled list of bottleneck-layers

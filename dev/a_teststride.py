@@ -1,6 +1,6 @@
 from math import ceil, log10
 
-from extras import resolve_jobid_filename
+from accelerator.extras import resolve_jobid_filename
 
 from . import darknetlayer
 from . import memory

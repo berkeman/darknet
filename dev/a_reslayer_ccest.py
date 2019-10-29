@@ -1,7 +1,7 @@
 from collections import namedtuple
 from math import ceil
 
-from dataset import DatasetWriter
+from accelerator.dataset import DatasetWriter
 
 datasets = ('source',)
 options = dict(N = 16)

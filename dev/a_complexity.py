@@ -1,4 +1,4 @@
-from dataset import DatasetWriter
+from accelerator.dataset import DatasetWriter
 
 from collections import namedtuple
 
