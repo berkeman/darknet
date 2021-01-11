@@ -1,6 +1,6 @@
 from math import log10, ceil
 
-from accelerator.extras import resolve_jobid_filename, DotDict
+from accelerator.extras import DotDict
 from accelerator.status import status
 from accelerator import blob
 from . import darknetlayer
@@ -9,6 +9,8 @@ from . import convlayer_classes as convlayer
 from . import cache
 
 depend_extra = (memory, convlayer, darknetlayer, cache)
+
+equivalent_hashes={'5b8a2a2b732047e65aed5e3e35cf18d09869af37': ('652bf927b97985fbcf8738faad41ac0642de5a45',)}
 
 jobids  = (
 	'darknet',      # directory with inputs/weights/outputs, one file per layer
@@ -73,9 +75,9 @@ def analysis(sliceno, prepare_res):
 		print('%2d  ' %(n,) + str(data[1]))
 		print('%2d  ' %(n,) + str(data[2]))
 
-		l0 = darknetlayer.Layer(resolve_jobid_filename(jobids.darknet, 'data_layer_%d.txt' % (data[0].loepnummer,)))
-		l1 = darknetlayer.Layer(resolve_jobid_filename(jobids.darknet, 'data_layer_%d.txt' % (data[1].loepnummer,)))
-		l2 = darknetlayer.Layer(resolve_jobid_filename(jobids.darknet, 'data_layer_%d.txt' % (data[2].loepnummer,)))
+		l0 = darknetlayer.Layer(jobids.darknet.filename('data_layer_%d.txt' % (data[0].loepnummer,)))
+		l1 = darknetlayer.Layer(jobids.darknet.filename('data_layer_%d.txt' % (data[1].loepnummer,)))
+		l2 = darknetlayer.Layer(jobids.darknet.filename('data_layer_%d.txt' % (data[2].loepnummer,)))
 
 		xmem = memory.Memory(options.xmemsize, WL)
 		ymem = memory.Memory(112*112*5, WL)

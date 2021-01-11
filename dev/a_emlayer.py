@@ -2,8 +2,6 @@ from math import log10
 
 from accelerator.dataset import DatasetWriter
 
-from accelerator.extras import resolve_jobid_filename
-
 from . import darknetlayer
 from . import memory
 from . import convlayer
@@ -56,7 +54,7 @@ def synthesis(SOURCE_DIRECTORY):
 			break
 		print()
 		print(loepnummer)
-		nn = darknetlayer.Layer(resolve_jobid_filename(jobids.darknet, 'data_layer_%d.txt' % (loepnummer,)))
+		nn = darknetlayer.Layer(jobids.darknet.load('data_layer_%d.txt' % (loepnummer,)))
 		print('BN=%d, activation=%s' % (nn.bn, nn.activation))
 		maxerr = None # scope
 		if nn.k == 1 and nn.groups == 1:

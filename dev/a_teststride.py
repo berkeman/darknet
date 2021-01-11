@@ -1,7 +1,5 @@
 from math import ceil, log10
 
-from accelerator.extras import resolve_jobid_filename
-
 from . import darknetlayer
 from . import memory
 from . import convlayer_classes as convlayer
@@ -43,9 +41,9 @@ def synthesis():
 
 	for loepnummer in (5,8,12,15,19,23,26,30,34,38,41,45,49,52,56,60):
 
-		l0 = darknetlayer.Layer(resolve_jobid_filename(jobids.darknet, 'data_layer_%d.txt' % (loepnummer-1,)))
-		l = darknetlayer.Layer(resolve_jobid_filename(jobids.darknet, 'data_layer_%d.txt' % (loepnummer,)))
-		l2 = darknetlayer.Layer(resolve_jobid_filename(jobids.darknet, 'data_layer_%d.txt' % (loepnummer+1,)))
+		l0 = darknetlayer.Layer(jobids.darknet.load('data_layer_%d.txt' % (loepnummer-1,)))
+		l = darknetlayer.Layer(jobids.darknet.load('data_layer_%d.txt' % (loepnummer,)))
+		l2 = darknetlayer.Layer(jobids.darknet.load('data_layer_%d.txt' % (loepnummer+1,)))
 
 		xmem = memory.Memory(112*112*5, WL)
 		ymem = memory.Memory(112*112*5, WL)

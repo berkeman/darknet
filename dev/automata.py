@@ -1,6 +1,5 @@
 from collections import Counter
 
-from accelerator.extras import resolve_jobid_filename
 from accelerator import blob
 
 bitsperword = 8
@@ -19,7 +18,7 @@ def main(urd):
 
 	jid = urd.build('csvimport',
 		options=dict(
-			filename=resolve_jobid_filename(jid_darknet, 'configuration.txt'),
+			filename=jid_darknet.filename('configuration.txt'),
 			separator=',',
 			labelsonfirstline=True,
 			allow_bad=False,
@@ -46,6 +45,7 @@ def main(urd):
 			),
 		)
 	)
+	jid_type='NN-2'
 
 	jid_bottlenecks = urd.build('findtriplettes', datasets=dict(config=jid_type))
 
@@ -60,9 +60,9 @@ def main(urd):
 	x = blob.load(jobid=jid_macs)
 	botmacs = sum(x[0].values())
 	skipmacs = sum(x[1].values())
-	print('MACs in bottleneck layers', botmacs)
-	print('MACs in skipped layers   ', skipmacs)
-	print('skipped ratio            ', skipmacs / (skipmacs + botmacs))
+#	print('MACs in bottleneck layers', botmacs)
+#	print('MACs in skipped layers   ', skipmacs)
+#	print('skipped ratio            ', skipmacs / (skipmacs + botmacs))
 
 
 
@@ -79,34 +79,46 @@ def main(urd):
 		(112*4,500,30),
 		(112*4,400,30),
 		(112*4,300,30),
+		(112*4,256,30),
 		(112*4,200,30),
 
+		(112*1,1000,30),
+		(112*1,500,30),
 		(112*1,400,30),
+		(112*1,300,30),
+		(112*1,256,30),
+		(112*1,200,30),
+
+		(112*2,300,30),
+		(112*3,300,30),
+
+		(112*2,256,30),
+		(112*3,256,30),
+
 
 		(m0size, m0size, m0size),
-		(1e6, 1e6, 1e6),
+		(1e7,1e7,1e7),
 
 #		(1e6, m0size, m0size),
 #		(m0size, 1e6, m0size),
 #		(m0size, m0size, 1e6),
 	):
 
+		print('=' * 80)
+
+
 		def cacti(size):
 			jid = urd.build('cacti', options=dict(args=dict(C=size, OUTPUT_WIDTH=32*8, B=32)))
 			return blob.load(jobid=jid)['Dynamic read energy (nJ)']
 
-#		costm = cacti(m0size)
-#		cost0 = cacti(c0size)
-#		cost1 = cacti(c1size)
+		costm = cacti(m0size*WL)
+		cost0 = cacti(c0size*WL)
+		cost1 = cacti(c1size*WL)
 #		cost2 = cacti(c2size)
+		cost2 = 0
 
-		costm = m0size
-		cost0 = c0size
-		cost1 = c1size
-		cost2 = c2size
-
-		MUL1 = 1
-		MUL3 = 1
+		MUL1 = 4
+		MUL3 = 9
 
 
 		def colmag(f):
@@ -125,10 +137,8 @@ def main(urd):
 		)
 		res = blob.load(jobid=jid)
 		tot = Counter()
-		print()
-		print('=' * 80)
-		print('cache sizes', c0size, c1size, c2size)
-		print('#MULS = %4d  %4d  %4d' % (WL*MUL1, WL*MUL3, WL*MUL1))
+		print('# cache sizes', c0size, c1size, c2size)
+		print('# MULS = %4d  %4d  %4d' % (WL*MUL1, WL*MUL3, WL*MUL1))
 		print("                        ______   ____________________    ____________________    ____________________    _______________________       ________________     ________________")
 		print(" n  maxerr    SNR         X RD     0 RD   0HIT   0MIS     01 RD  01HIT  01MIS     12 RD  12HIT  12MIS     cc 1x1  cc 3x3  cc 1x1             tot energy     tot clock cycles")
 
@@ -138,21 +148,21 @@ def main(urd):
 			t.l1stat['cc'] /= MUL3
 			t.l2stat['cc'] /= MUL1
 			t.cc = t.l0stat['cc'] + t.l1stat['cc'] + t.l2stat['cc']
-			print("%2d  %f  %5.2f    %6d   %6d %6d %6d    %6d %6d %6d    %6d %6d %6d    %7d %7d %7d   %20s %20s   %s" % (
+			print("%2d  %f  %5.2f    %6d   %6d %6d %6d    %6d %6d %6d    %6d %6d %6d    %7d %7d %7d   %20.1f %20s   %s" % (
 				t.n, t.maxerr, t.snr,
 				t.xrcnt,
 				t.c0.reads, t.c0.hits, t.c0.miss,
 				t.c1.reads, t.c1.hits, t.c1.miss,
 				t.c2.reads, t.c2.hits, t.c2.miss,
 				t.l0stat['cc'], t.l1stat['cc'], t.l2stat['cc'],
-				"{:,}".format(t.energy),
+				t.energy,
 				"{:,}".format(t.cc),
 				"%dx%d %d->%d->%d %dx%d" % (t.l0stat['wi'], t.l0stat['hi'], t.l0stat['ci'], t.l2stat['ci'], t.l2stat['co'], t.l2stat['wo'], t.l2stat['ho'],),
 			))
 			tot['cc'] += t.cc
 			tot['e']  += t.energy
-		print("                                                                                                                                   %20s %20s" % (
-			"{:,}".format(tot['e']),
+		print("                                                                                                                                   %20.1f %20s" % (
+			tot['e'],
 			"{:,}".format(tot['cc']),
 		))
 		print()
@@ -176,22 +186,23 @@ def main(urd):
 				t.l1stat['wi']*t.l1stat['hi']*t.l1stat['ci'],
 			))
 		print("\n")
+		print('')
 
 
 		costs.append(res)
 
-	print("     xmem        c0         c1         c2           energy           cc      rate")
-	for item in costs:
-		print("%9d %10d %10d %10d    %12d %12d  %5.2ffps" % (
-			item[0].xsize*WL*bitsperword,
-			item[0].c0size*WL*bitsperword,
-			item[0].c1size*WL*bitsperword,
-			item[0].c2size*WL*bitsperword,
+	print("     xmem        c0         c1         c2           energy           cc     rate")
+	for item in sorted(costs, key=lambda x: (sum(w.cc for w in x), -sum(w.energy for w in x))):
+		print("%9d %10d %10d %10d    %12d %12d  %7.2f" % (
+			item[0].xsize*WL,
+			item[0].c0size*WL,
+			item[0].c1size*WL,
+			item[0].c2size*WL,
 			sum(x.energy for x in item),
 			sum(x.cc for x in item),
 			system_freq/sum(x.cc for x in item)
 		))
-	print("All memory sizes in *bits*")
+	print("All memory sizes in *activations/\"bytes\"*")
 
-	from accelerator.automata_common import profile_jobs
-	print('\nExec time', profile_jobs(urd.joblist))
+#	from accelerator.automata_common import profile_jobs
+#	print('\nExec time', profile_jobs(urd.joblist))
