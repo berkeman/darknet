@@ -1,5 +1,6 @@
-from os.path import join
+from os.path import join, exists
 import subprocess
+from json import dumps
 
 options = {
 	"args": {},
@@ -51,8 +52,9 @@ DEFAULT_ARGS = {
 assert len(set(ARG_ORDER)) == len(ARG_ORDER)
 assert set(ARG_ORDER) == set(DEFAULT_ARGS)
 
-def synthesis(SOURCE_DIRECTORY):
 
+def synthesis(job):
+	SOURCE_DIRECTORY = job.input_directory
 	command = [join(SOURCE_DIRECTORY, "./cacti.5.3.rev.174/cacti")]
 	for arg in ARG_ORDER:
 		command.append(str(options.args.get(arg, DEFAULT_ARGS[arg])))
@@ -61,12 +63,18 @@ def synthesis(SOURCE_DIRECTORY):
 
 	subprocess.check_call(command)
 
-	with open('command.txt', 'wt') as fh:
+	with job.open('command.txt', 'wt') as fh:
 		fh.write(' '.join(command) + '\n')
+
+	cacti_output = "out.csv"
+	if exists(cacti_output):
+		job.register_file(cacti_output)
+
 
 	with open("out.csv") as fh:
 		keys = fh.readline().strip().split(", ")
 		values = fh.readline().strip().split(", ")
+
 	def parser():
 		for v in values:
 			try:
@@ -75,4 +83,9 @@ def synthesis(SOURCE_DIRECTORY):
 				yield float(v)
 			except ValueError:
 				yield v
-	return dict(zip(keys, parser()))
+	res = dict(zip(keys, parser()))
+
+	with job.open("cacti_output.json", "wt") as fh:
+		fh.write(dumps(res))
+
+	return res

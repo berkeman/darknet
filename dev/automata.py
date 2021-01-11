@@ -1,125 +1,86 @@
 from collections import Counter
 
-from accelerator import blob
-
 bitsperword = 8
 WL = 32
-if WL>=24:
-	m0size = 224*224
+if WL >= 24:
+	m0size = 224 * 224
 else:
 	print("fix m0size, min requirement is 224*224*24 words")
 	exit()
 
 system_freq = 1e9
 
+
 def main(urd):
 
 	jid_darknet = urd.build('darknet')
 
 	jid = urd.build('csvimport',
-		options=dict(
-			filename=jid_darknet.filename('configuration.txt'),
-			separator=',',
-			labelsonfirstline=True,
-			allow_bad=False,
-		)
+		filename=jid_darknet.filename('configuration.txt'),
+		separator=',',
+		labelsonfirstline=True,
+		allow_bad=False,
 	)
+
 	jid_type = urd.build('dataset_type',
-		datasets=dict(source=jid),
-		options=dict(
-			column2type=dict(
-				loepnummer='number',
-				layer='unicode:UTF-8',
-				n='number',
-				sx='number',
-				sy='number',
-				groups='number',
-				stride='number',
-				wi='number',
-				hi='number',
-				ci='number',
-				wo='number',
-				ho='number',
-				co='number',
-				mac='number',
-			),
+		source=jid,
+		column2type=dict(
+		loepnummer='number',
+		layer='unicode:UTF-8',
+		n='number',
+		sx='number',
+		sy='number',
+		groups='number',
+		stride='number',
+		wi='number',
+		hi='number',
+		ci='number',
+		wo='number',
+		ho='number',
+		co='number',
+		mac='number',
 		)
 	)
-	jid_type='NN-2'
 
-	jid_bottlenecks = urd.build('findtriplettes', datasets=dict(config=jid_type))
-
-#	jid = urd.build('teststride', jobids=dict(darknet=jid_darknet))
+	jid_bottlenecks = urd.build('findtriplettes', config=jid_type)
 
 	urd.build('addmemsizes', datasets=dict(config=jid_type))
 
 	jid_macs = urd.build('countmacs',
-		jobids=dict(bottlenecks=jid_bottlenecks),
-		datasets=dict(config=jid_type),
+		bottlenecks=jid_bottlenecks,
+		config=jid_type,
 	)
-	x = blob.load(jobid=jid_macs)
+	x = jid_macs.load()
 	botmacs = sum(x[0].values())
 	skipmacs = sum(x[1].values())
-#	print('MACs in bottleneck layers', botmacs)
-#	print('MACs in skipped layers   ', skipmacs)
-#	print('skipped ratio            ', skipmacs / (skipmacs + botmacs))
-
-
+	print('MACs in bottleneck layers: {0:n}'.format(botmacs))
+	print('MACs in skipped layers:     {0:n}'.format(skipmacs))
+	print('Covered MACs (ratio):             %3d%%' % (round(100 * (1 - skipmacs / (skipmacs + botmacs))),))
 
 	costs = []
-
 	for c0size, c1size, c2size in (
-
-		(112*1,10000,30),
-		(112*2,10000,30),
-		(112*3,10000,30),
-		(112*4,10000,30),
-
-		(112*4,1000,30),
-		(112*4,500,30),
-		(112*4,400,30),
-		(112*4,300,30),
-		(112*4,256,30),
-		(112*4,200,30),
-
-		(112*1,1000,30),
-		(112*1,500,30),
-		(112*1,400,30),
-		(112*1,300,30),
-		(112*1,256,30),
-		(112*1,200,30),
-
-		(112*2,300,30),
-		(112*3,300,30),
-
-		(112*2,256,30),
-		(112*3,256,30),
-
-
+		(112*1,10000,30),  (112*2,10000,30),  (112*3,10000,30),  (112*4,10000,30),
+		(112*4,1000,30),   (112*4,500,30),    (112*4,400,30),    (112*4,300,30),  (112*4,256,30),  (112*4,200,30),
+		(112*1,1000,30),   (112*1,500,30),    (112*1,400,30),    (112*1,300,30),  (112*1,256,30),  (112*1,200,30),
+		(112*2,300,30),    (112*3,300,30),
+		(112*2,256,30),    (112*3,256,30),
 		(m0size, m0size, m0size),
 		(1e7,1e7,1e7),
-
-#		(1e6, m0size, m0size),
-#		(m0size, 1e6, m0size),
-#		(m0size, m0size, 1e6),
 	):
 
 		print('=' * 80)
 
-
 		def cacti(size):
 			jid = urd.build('cacti', options=dict(args=dict(C=size, OUTPUT_WIDTH=32*8, B=32)))
-			return blob.load(jobid=jid)['Dynamic read energy (nJ)']
+			return jid.load()['Dynamic read energy (nJ)']
 
 		costm = cacti(m0size*WL)
 		cost0 = cacti(c0size*WL)
 		cost1 = cacti(c1size*WL)
-#		cost2 = cacti(c2size)
 		cost2 = 0
 
 		MUL1 = 4
 		MUL3 = 9
-
 
 		def colmag(f):
 			if f >= 3.0:
@@ -131,14 +92,15 @@ def main(urd):
 			else:
 				return '[37m%6.2f[0m' % (f,)
 
-		jid = urd.build('bottleneck',
-			jobids=dict(darknet=jid_darknet, bottlenecks=jid_bottlenecks),
-			options=dict(xmemsize=m0size, cache0size=c0size, cache01size=c1size, cache12size=c2size, WL=WL, runonly=None)
-		)
-		res = blob.load(jobid=jid)
+		res = urd.build('bottleneck',
+			darknet=jid_darknet,
+			bottlenecks=jid_bottlenecks,
+			xmemsize=m0size, cache0size=c0size, cache01size=c1size, cache12size=c2size, WL=WL, runonly=None
+		).load()
+
 		tot = Counter()
 		print('# cache sizes', c0size, c1size, c2size)
-		print('# MULS = %4d  %4d  %4d' % (WL*MUL1, WL*MUL3, WL*MUL1))
+		print('# MULS = %4d  %4d  %4d' % (WL * MUL1, WL * MUL3, WL * MUL1))
 		print("                        ______   ____________________    ____________________    ____________________    _______________________       ________________     ________________")
 		print(" n  maxerr    SNR         X RD     0 RD   0HIT   0MIS     01 RD  01HIT  01MIS     12 RD  12HIT  12MIS     cc 1x1  cc 3x3  cc 1x1             tot energy     tot clock cycles")
 
@@ -204,5 +166,4 @@ def main(urd):
 		))
 	print("All memory sizes in *activations/\"bytes\"*")
 
-#	from accelerator.automata_common import profile_jobs
-#	print('\nExec time', profile_jobs(urd.joblist))
+	print('\n\nExec times', urd.joblist.print_exectimes())

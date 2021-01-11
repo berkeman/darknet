@@ -1,13 +1,12 @@
-from accelerator import blob
-
-jobids  = (
+jobs = (
 	'bottlenecks',  # job with pickled list of bottleneck-layers
 )
 
 datasets = ('config',)
 
+
 def synthesis():
-	bottlenecks, unused_layers = blob.load(jobid=jobids.bottlenecks)
+	bottlenecks, unused_layers = jobs.bottlenecks.load()
 
 	botmacs = {}
 	skipmacs = {}

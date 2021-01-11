@@ -1,8 +1,7 @@
 from math import log10, ceil
 
-from accelerator.extras import DotDict
-from accelerator.status import status
-from accelerator import blob
+from accelerator import DotDict
+from accelerator import status
 from . import darknetlayer
 from . import memory
 from . import convlayer_classes as convlayer
@@ -10,22 +9,21 @@ from . import cache
 
 depend_extra = (memory, convlayer, darknetlayer, cache)
 
-equivalent_hashes={'5b8a2a2b732047e65aed5e3e35cf18d09869af37': ('652bf927b97985fbcf8738faad41ac0642de5a45',)}
+#equivalent_hashes={'5b8a2a2b732047e65aed5e3e35cf18d09869af37': ('652bf927b97985fbcf8738faad41ac0642de5a45',)}
 
-jobids  = (
+jobs = (
 	'darknet',      # directory with inputs/weights/outputs, one file per layer
 	'bottlenecks',  # job with pickled list of bottleneck-layers
 )
 
 options = dict(
-	xmemsize=224*224*3,
+	xmemsize=224 * 224 * 3,
 	cache0size=1,
 	cache01size=1,
 	cache12size=1,
-	WL = 32,
+	WL=32,
 	runonly=None,
 )
-
 
 
 def check(xv, yv, thres=1e-5):
@@ -36,27 +34,25 @@ def check(xv, yv, thres=1e-5):
 	ptot = 0
 	for ix, (x, y) in enumerate(zip(xv, yv)):
 		e = abs(x - y)
-		perr += e*e
-		ptot += x*x
+		perr += e * e
+		ptot += x * x
 		if e > thres:
 			errs += 1
 		maxerr = max(maxerr, e)
 		cnt += 1
-	snr = -10*log10(perr/ptot)
+	snr = -10 * log10(perr / ptot)
 	print('checked %9d  errs %9d  maxerr [42m%0.12f[0m  snr(dB) %4.2f' % (
 		cnt, errs, maxerr, snr))
 	return cnt, errs, maxerr, snr
 
 
-
 def prepare(params):
 	# load all bottlenecks and spread "evenly" to all slices
-	x, _ = blob.load(jobid=jobids.bottlenecks)
+	x, _ = jobs.bottlenecks.load()
 	res = [{} for x in range(params.slices)]
 	for ix, (key, val) in enumerate(sorted(x.items())):
 		res[ix % params.slices][key] = val
 	return res
-
 
 
 def analysis(sliceno, prepare_res):
@@ -71,16 +67,16 @@ def analysis(sliceno, prepare_res):
 			print('skip', n)
 			continue
 
-		print('%2d  ' %(n,) + str(data[0]))
-		print('%2d  ' %(n,) + str(data[1]))
-		print('%2d  ' %(n,) + str(data[2]))
+		print('%2d  ' % (n,) + str(data[0]))
+		print('%2d  ' % (n,) + str(data[1]))
+		print('%2d  ' % (n,) + str(data[2]))
 
-		l0 = darknetlayer.Layer(jobids.darknet.filename('data_layer_%d.txt' % (data[0].loepnummer,)))
-		l1 = darknetlayer.Layer(jobids.darknet.filename('data_layer_%d.txt' % (data[1].loepnummer,)))
-		l2 = darknetlayer.Layer(jobids.darknet.filename('data_layer_%d.txt' % (data[2].loepnummer,)))
+		l0 = darknetlayer.Layer(jobs.darknet.filename('data_layer_%d.txt' % (data[0].loepnummer,)))
+		l1 = darknetlayer.Layer(jobs.darknet.filename('data_layer_%d.txt' % (data[1].loepnummer,)))
+		l2 = darknetlayer.Layer(jobs.darknet.filename('data_layer_%d.txt' % (data[2].loepnummer,)))
 
 		xmem = memory.Memory(options.xmemsize, WL)
-		ymem = memory.Memory(112*112*5, WL)
+		ymem = memory.Memory(112 * 112 * 5, WL)
 
 		wmem0 = memory.create_weight_mem_1x1(l0.weights, nwords=WL, channels_in=l0.ci, channels_out=l0.co)
 		bias0 = convlayer.BiasNorm(l0)
@@ -97,7 +93,7 @@ def analysis(sliceno, prepare_res):
 		def xmemread(w, h):
 			# return data for all channels at (w, h)
 			v = []
-			for c in range(ceil(l0.ci/WL)):
+			for c in range(ceil(l0.ci / WL)):
 				a = w + (h * l0.wi) + (c * l0.wi * l0.hi)
 				v.append(xmem.read(a))
 			return v
@@ -115,10 +111,10 @@ def analysis(sliceno, prepare_res):
 		with status(msg % (0,)) as update:
 			for h in range(l2.ho):
 				for w in range(l2.wo):
-					update((msg % (h,)) + " %d"%(w,))
+					update((msg % (h,)) + " %d" % (w,))
 					data = layer2.conv(w, h)
 					for ix, block in enumerate(data):
-						ymem.write(w + h*l2.wo + ix * l2.wo * l2.ho, block)
+						ymem.write(w + h * l2.wo + ix * l2.wo * l2.ho, block)
 		out = ymem.export(width=l2.wo, height=l2.ho, channels=l2.co)
 
 		_, _, maxerr, snr = check(out, l2.outputs3)
@@ -128,21 +124,20 @@ def analysis(sliceno, prepare_res):
 				n=n,
 				maxerr=maxerr,
 				snr=snr,
-				c0 = DotDict(reads=cache0.m.reads,  hits=cache0.m.hits,  miss=cache0.m.miss),
-				c1 = DotDict(reads=cache01.m.reads, hits=cache01.m.hits, miss=cache01.m.miss),
-				c2 = DotDict(reads=cache12.m.reads, hits=cache12.m.hits, miss=cache12.m.miss),
-				c0size = options.cache0size,
-				c1size = options.cache01size,
-				c2size = options.cache12size,
-				xsize = options.xmemsize,
-				xrcnt = xmem.readcnt,
-				l0stat = layer0.status(),
-				l1stat = layer1.status(),
-				l2stat = layer2.status(),
+				c0=DotDict(reads=cache0.m.reads, hits=cache0.m.hits, miss=cache0.m.miss),
+				c1=DotDict(reads=cache01.m.reads, hits=cache01.m.hits, miss=cache01.m.miss),
+				c2=DotDict(reads=cache12.m.reads, hits=cache12.m.hits, miss=cache12.m.miss),
+				c0size=options.cache0size,
+				c1size=options.cache01size,
+				c2size=options.cache12size,
+				xsize=options.xmemsize,
+				xrcnt=xmem.readcnt,
+				l0stat=layer0.status(),
+				l1stat=layer1.status(),
+				l2stat=layer2.status(),
 			)
 		)
 	return res
-
 
 
 def synthesis(analysis_res):
